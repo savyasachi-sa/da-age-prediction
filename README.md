@@ -20,3 +20,5 @@ source venv/bin/activate
 
 pip install -r requirements.txt
 
+add utk dataset to /da-age-prediction/Data/
+
