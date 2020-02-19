@@ -18,6 +18,7 @@ from os.path import isfile, join
 class dataset():
     def __init__(self, src, ethnicity, source_val_split_perc, img_location):
         self.img_location = img_location
+
         source_ethnicity = ethnicity['source']
         target_ethnicity = ethnicity['target']
         source_dataset_path = src + str(source_ethnicity)
@@ -31,15 +32,18 @@ class dataset():
         with open('./Data/source_train.csv', 'w', newline='') as file:
             writer = csv.writer(file)
             writer.writerow(fieldnames)
-            writer.writerows([self.get_location_image(source_ethnicity, img), source_ethnicity] for img in source_img_files[0:train_end_idx])
+            writer.writerows([self.get_location_image(source_ethnicity, img), self.get_age(img)] for img in source_img_files[0:train_end_idx])
         with open('./Data/source_validation.csv', 'w', newline='') as file:
             writer = csv.writer(file)
             writer.writerow(fieldnames)
-            writer.writerows([self.get_location_image(source_ethnicity, img), source_ethnicity] for img in source_img_files[train_end_idx:len(source_img_files)])
+            writer.writerows([self.get_location_image(source_ethnicity, img), self.get_age(img)] for img in source_img_files[train_end_idx:len(source_img_files)])
         with open('./Data/target_train.csv', 'w', newline='') as file:
             writer = csv.writer(file)
             writer.writerow(fieldnames)
-            writer.writerows([self.get_location_image(target_ethnicity, img), target_ethnicity] for img in target_img_files[0:len(target_img_files)])
+            writer.writerows([self.get_location_image(target_ethnicity, img), self.get_age(img)] for img in target_img_files[0:len(target_img_files)])
 
     def get_location_image(self, ethnicity, img):
         return self.img_location + str(ethnicity) + '/' + img
+
+    def get_age(self, img):
+        return img.split('_')[0]
