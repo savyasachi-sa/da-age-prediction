@@ -2,6 +2,7 @@ import csv
 from os import listdir
 from os.path import isfile, join
 from config import *
+import random
 
 
 class DatasetDesign():
@@ -15,6 +16,10 @@ class DatasetDesign():
 
         source_img_files = [f for f in listdir(source_dataset_path) if isfile(join(source_dataset_path, f))]
         target_img_files = [f for f in listdir(target_dataset_path) if isfile(join(target_dataset_path, f))]
+
+        random.seed(2)
+        random.shuffle(source_img_files)
+        random.shuffle(target_img_files)
 
         train_end_idx = int(len(source_img_files) * source_val_split_perc * .01)
         fieldnames = ['images', 'labels']
