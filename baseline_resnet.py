@@ -1,12 +1,13 @@
 import torch.nn as nn
 import torchvision.models as models
 
+
 class BaselineResnet(nn.Module):
     def __init__(self):
         super().__init__()
-        self.resnet = models.resnet18(pretrained=True)
+        self.resnet = models.resnet50(pretrained=True)
         for param in self.resnet.parameters():
-            param.requires_grad = False #TODO: shouldn't involve fc layer??
+            param.requires_grad = False
         self.resnet.fc = nn.Sequential(
             nn.Linear(512, 256, bias=True),
             nn.Linear(256, 128, bias=True),
@@ -14,5 +15,4 @@ class BaselineResnet(nn.Module):
         )
 
     def forward(self, x):
-        print('in forward now')
         return self.resnet.forward(x)
