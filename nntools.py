@@ -139,15 +139,18 @@ class Experiment(object):
             set and the validation set. (default: False)
     """
 
-    def __init__(self, net, train_set, val_set, optimizer, stats_manager,
-                 output_dir=None, batch_size=16, perform_validation_during_training=False):
+    def __init__(self, net, train_set, val_set, stats_manager, optimizer, config,
+                 output_dir=None, perform_validation_during_training=False):
+
+        batch_size = config['batch_size']
+        learning_rate = config['learning_rate']
+        num_workers = config['num_workers']
 
         # Define data loaders
         train_loader = td.DataLoader(train_set, batch_size=batch_size, shuffle=True,
-                                     drop_last=True, pin_memory=True)
+                                     pin_memory=True)
         val_loader = td.DataLoader(val_set, batch_size=batch_size, shuffle=False,
-                                   drop_last=True, pin_memory=True)
-
+                                   pin_memory=True)
         # Initialize history
         history = []
 
@@ -164,11 +167,12 @@ class Experiment(object):
 
         # Load checkpoint and check compatibility
         if os.path.isfile(config_path):
-            with open(config_path, 'r') as f:
-                if f.read()[:-1] != repr(self):
-                    raise ValueError(
-                        "Cannot create this experiment: "
-                        "I found a checkpoint conflicting with the current setting.")
+            # with open(config_path, 'r') as f:
+            #     if f.read()[:-1] != repr(self):
+            #         print(f.read()[:-1], repr(self))
+            #         raise ValueError(
+            #             "Cannot create this experiment: "
+            #             "I found a checkpoint conflicting with the current setting.")
             self.load()
         else:
             self.save()
@@ -259,6 +263,7 @@ class Experiment(object):
             self.stats_manager.init()
             for x, d in self.train_loader:
                 x, d = x.to(self.net.device), d.to(self.net.device)
+                d = d.view([len(d), 1])
                 self.optimizer.zero_grad()
                 y = self.net.forward(x)
                 loss = self.net.criterion(y, d)
@@ -288,6 +293,7 @@ class Experiment(object):
         with torch.no_grad():
             for x, d in self.val_loader:
                 x, d = x.to(self.net.device), d.to(self.net.device)
+                d = d.view([len(d), 1])
                 y = self.net.forward(x)
                 loss = self.net.criterion(y, d)
                 self.stats_manager.accumulate(loss.item(), x, y, d)
