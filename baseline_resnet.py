@@ -11,4 +11,4 @@ class BaselineResnet(nn.Module):
 
     def forward(self, x):
         print('in forward now')
-        self.resnet.forward(x)
+        return self.resnet.forward(x)

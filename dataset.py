@@ -1,49 +1,29 @@
-import csv
-from shutil import copy2
-from os import listdir
-from os.path import isfile, join
+from torch.utils.data import Dataset
+import tarfile
 
-# #Using dataset.py
-# from dataset import *
-# src = '/Users/vulcan/da-age-prediction/Data/utk/'
-# ethnicity = {
-#     "source" : 0,
-#     "target" : 1,
-# }
-# source_val_split_perc = 80
-# img_location = '/da-age-prediction/Data/'
-# _dataset = dataset(src, ethnicity, source_val_split_perc, img_location)
+import numpy as np
+from PIL import Image, ImageOps
+import torch
+import pandas as pd
+from collections import namedtuple
 
+class UTK(Dataset):
+    def __init__(self, csv_file):
+        self.data = pd.read_csv(csv_file)
 
-class dataset():
-    def __init__(self, src, ethnicity, source_val_split_perc, img_location):
-        self.img_location = img_location
+    def __len__(self):
+        return len(self.data)
 
-        source_ethnicity = ethnicity['source']
-        target_ethnicity = ethnicity['target']
-        source_dataset_path = src + str(source_ethnicity)
-        target_dataset_path = src + str(target_ethnicity)
+    def __getitem__(self, idx):
+        img_name   = self.data.iloc[idx, 0]
+        img_full = Image.open(img_name).convert('RGB')
+        label_age = self.data.iloc[idx, 1]
 
-        source_img_files = [f for f in listdir(source_dataset_path) if isfile(join(source_dataset_path, f))]
-        target_img_files = [f for f in listdir(target_dataset_path) if isfile(join(target_dataset_path, f))]
+        img_full = np.asarray(img_full)
 
-        train_end_idx = int(len(source_img_files) * source_val_split_perc * .01)
-        fieldnames = ['images', 'labels']
-        with open('./Data/source_train.csv', 'w', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerow(fieldnames)
-            writer.writerows([self.get_location_image(source_ethnicity, img), self.get_age(img)] for img in source_img_files[0:train_end_idx])
-        with open('./Data/source_validation.csv', 'w', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerow(fieldnames)
-            writer.writerows([self.get_location_image(source_ethnicity, img), self.get_age(img)] for img in source_img_files[train_end_idx:len(source_img_files)])
-        with open('./Data/target_train.csv', 'w', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerow(fieldnames)
-            writer.writerows([self.get_location_image(target_ethnicity, img), self.get_age(img)] for img in target_img_files[0:len(target_img_files)])
+        # convert to tensor
+        img_full = torch.from_numpy(np.array(img_full).copy()).float()
+        img_full = img_full.view([3,200,200])
+        label_age = torch.tensor(np.float(label_age))
 
-    def get_location_image(self, ethnicity, img):
-        return self.img_location + str(ethnicity) + '/' + img
-
-    def get_age(self, img):
-        return img.split('_')[0]
+        return img_full, label_age
