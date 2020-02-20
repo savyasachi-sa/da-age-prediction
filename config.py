@@ -2,7 +2,7 @@ import torch
 
 # Change These
 
-DATASET_ROOT_DIRECTORY = "/Users/savyasachi/utk/"
+DATASET_ROOT_DIRECTORY = "./data/utk/"
 
 BASELINE_CONFIG = {
     'learning_rate': 1e-3,
