@@ -18,3 +18,5 @@ SOURCE_VAL_PATH = DATASET_ROOT_DIRECTORY + "source_validation.csv"
 TARGET_TRAIN_PATH = DATASET_ROOT_DIRECTORY + "target_train.csv"
 
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+WINDOW_THRESH = 3
