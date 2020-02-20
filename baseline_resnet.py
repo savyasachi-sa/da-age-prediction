@@ -10,11 +10,11 @@ def init_weights(m):
 
 
 class BaselineResnet(NeuralNetwork):
-    def __init__(self):
+    def __init__(self, fine_tuning = True):
         super().__init__()
         self.resnet = models.resnet50(pretrained=True)
         for param in self.resnet.parameters():
-            param.requires_grad = False
+            param.requires_grad = fine_tuning
         self.resnet.fc = nn.Sequential(
             nn.Linear(2048, 1024, bias=True),
             nn.BatchNorm1d(1024),

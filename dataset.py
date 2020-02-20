@@ -1,11 +1,8 @@
 from torch.utils.data import Dataset
-import tarfile
-
-import numpy as np
-from PIL import Image, ImageOps
-import torch
+from PIL import Image
 import pandas as pd
-from collections import namedtuple
+import torchvision.transforms as transforms
+import torch
 
 class UTK(Dataset):
     def __init__(self, csv_file):
@@ -19,11 +16,12 @@ class UTK(Dataset):
         img_full = Image.open(img_name).convert('RGB')
         label_age = self.data.iloc[idx, 1]
 
-        img_full = np.asarray(img_full)
+        normalize = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        ])
 
-        # convert to tensor
-        img_full = torch.from_numpy(np.array(img_full).copy()).float()
-        img_full = img_full.view([3,200,200])
-        label_age = torch.tensor(np.float(label_age))
+        img_full = normalize(img_full)
+        label_age = torch.tensor(label_age).type(torch.FloatTensor)
 
         return img_full, label_age
