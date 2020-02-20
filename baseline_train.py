@@ -32,4 +32,4 @@ if __name__ == "__main__":
 
     # Run Experiment
 
-    exp.run(num_epochs=35, plot=lambda e: report_loss(e))
+    exp.run(num_epochs=100, plot=lambda e: report_loss(e))
