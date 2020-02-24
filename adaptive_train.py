@@ -22,9 +22,9 @@ if __name__ == "__main__":
     # Build Dataset
     source_val_split_percentage = 80
     _dataset = DatasetDesign(ethnicity, source_val_split_percentage)
-    train_dataset = UTK(SOURCE_TRAIN_PATH)
-    val_dataset = UTK(SOURCE_VAL_PATH)
-    target_dataset = UTK(TARGET_TRAIN_PATH)
+    train_dataset = UTK(SOURCE_TRAIN_PATH, random_flips=True)
+    val_dataset = UTK(SOURCE_VAL_PATH, random_flips=False)
+    target_dataset = UTK(TARGET_TRAIN_PATH, random_flips=True)
 
     # Setup Experiment
     print(DEVICE)
