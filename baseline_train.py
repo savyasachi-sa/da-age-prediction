@@ -43,7 +43,10 @@ def plot_separate(exp : Experiment, output_dir, plot_type = 'accuracy'):
     plt.ylabel(plot_type.upper()[0] + plot_type[1:])
     plt.plot([exp.history[k][0][plot_type] for k in range(exp.epoch)],label="training {}".format(plot_type))
     plt.legend()
-    plt.savefig('./baseline/plots/plot_{}.png'.format(plot_type))
+    plots_path = os.path.join(output_dir,"plots")
+    if not os.path.exists(plots_path):
+        os.mkdir(plots_path)
+    plt.savefig(plots_path + '/plot_{}.png'.format(plot_type))
     
 ethnicity = {
     "source": 0,
