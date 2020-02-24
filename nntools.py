@@ -146,6 +146,8 @@ class Experiment(object):
         learning_rate = config['learning_rate']
         num_workers = config['num_workers']
 
+        self.best_loss = 1e6
+
         # Define data loaders
         train_loader = td.DataLoader(train_set, batch_size=batch_size, shuffle=True,
                                      pin_memory=True)
@@ -298,4 +300,10 @@ class Experiment(object):
                 loss = self.net.criterion(y, d)
                 self.stats_manager.accumulate(loss.item(), x, y, d)
         self.net.train()
-        return self.stats_manager.summarize()
+        output = self.stats_manager.summarize()
+
+        if output['loss'] <= self.best_loss:
+            self.best_loss = output['loss']
+            torch.save(self.net, self.output_dir + "/best-model.pt")
+
+        return output
