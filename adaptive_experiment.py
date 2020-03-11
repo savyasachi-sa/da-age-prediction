@@ -222,7 +222,7 @@ class AdaptiveExperiment(object):
                 f, y = self.net.forward(x)
                 loss = self.net.criterion(y, d)
                 val_loss += loss
-                # self.stats_manager.accumulate(loss.item(), x, y, d)
+                self.stats_manager.accumulate(loss.item(), x, y, d)
 
         with torch.no_grad():
             for x, d in self.target_loader:
