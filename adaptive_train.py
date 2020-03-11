@@ -1,5 +1,7 @@
 from adaptive_experiment import AdaptiveExperiment
-from adaptive_regressor import AdaptiveRegressor
+#from adaptive_regressor import AdaptiveRegressor
+from adaptive_resnet import ResnetAdaptive
+from adversarial_network import AdverserialNetwork
 from dataset import UTK
 from dataset_design import DatasetDesign
 from nntools import Experiment, StatsManager
@@ -28,14 +30,18 @@ if __name__ == "__main__":
 
     # Setup Experiment
     print(DEVICE)
-    net = AdaptiveRegressor()
+    net = ResnetAdaptive(REGRESSOR_CONF['feature_size'], REGRESSOR_CONF['finetune'])
+    adver_net = AdverserialNetwork(REGRESSOR_CONF['feature_size'], ADV_CONF['hidden_size'])
     net = net.to(DEVICE)
+    adver_net = adver_net.to(DEVICE)
     stats_manager = StatsManager()
     optimizer = torch.optim.Adam(net.parameters(), lr=BASELINE_CONFIG['learning_rate'])
-    exp = AdaptiveExperiment(net, train_dataset, val_dataset, target_dataset, stats_manager, optimizer, BASELINE_CONFIG,
+    optimizer_adv = torch.optim.Adam(adver_net.parameters(), lr=BASELINE_CONFIG['learning_rate'])
+    exp = AdaptiveExperiment(net, adver_net, train_dataset, val_dataset, target_dataset, stats_manager, optimizer,
+                             optimizer_adv, BASELINE_CONFIG,
                              output_dir="adaptive",
-                             perform_validation_during_training=False)
+                             perform_validation_during_training=True)
 
     # Run Experiment
 
-    exp.run(num_epochs=10, plot=lambda e: report_loss(e))
+    exp.run(num_epochs=BASELINE_CONFIG['num_epochs'], plot=lambda e: report_loss(e))

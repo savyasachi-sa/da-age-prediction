@@ -1,21 +1,131 @@
-from nntools import Experiment
+from nntools import *
 import time
 import torch
 import torch.utils.data as td
+from loss_funcs import *
+import os
+import time
+import torch
+from torch import nn
+import torch.utils.data as td
+from abc import ABC, abstractmethod
 
 
-class AdaptiveExperiment(Experiment):
-    def __init__(self, net, train_set, val_set, target_set, stats_manager, optimizer, config,
+class AdaptiveExperiment(object):
+
+    def __init__(self, net, adver_net, train_set, val_set, target_set, stats_manager, optimizer, optimizer_adv, config,
                  output_dir=None, perform_validation_during_training=False):
-        super().__init__(net, train_set, val_set, stats_manager, optimizer, config,
-                 output_dir=output_dir, perform_validation_during_training=perform_validation_during_training)
 
-        self.target_loader = td.DataLoader(train_set, batch_size=config['batch_size'], shuffle=True,
+        batch_size = config['batch_size']
+        learning_rate = config['learning_rate']
+        num_workers = config['num_workers']
+        self.config = config
+        self.adv_net = adver_net
+        self.adv_optimizer = optimizer_adv
+        self.best_loss = 1e6
+
+        # Define data loaders
+        train_loader = td.DataLoader(train_set, batch_size=batch_size, shuffle=True,
                                      pin_memory=True)
+        val_loader = td.DataLoader(val_set, batch_size=batch_size, shuffle=False,
+                                   pin_memory=True)
+        self.target_loader = td.DataLoader(train_set, batch_size=config['batch_size'], shuffle=True,
+                                           pin_memory=True)
+        # Initialize history
+        history = []
 
+        # Define checkpoint paths
+        if output_dir is None:
+            output_dir = 'experiment_{}'.format(time.time())
+        os.makedirs(output_dir, exist_ok=True)
+        checkpoint_path = os.path.join(output_dir, "checkpoint.pth.tar")
+        config_path = os.path.join(output_dir, "config.txt")
 
-    def run(self,num_epochs, plot=None):
+        # Transfer all local arguments/variables into attributes
+        locs = {k: v for k, v in locals().items() if k is not 'self'}
+        self.__dict__.update(locs)
+
+        # Load checkpoint and check compatibility
+        if os.path.isfile(config_path):
+            # with open(config_path, 'r') as f:
+            #     if f.read()[:-1] != repr(self):
+            #         print(f.read()[:-1], repr(self))
+            #         raise ValueError(
+            #             "Cannot create this experiment: "
+            #             "I found a checkpoint conflicting with the current setting.")
+            self.load()
+        else:
+            self.save()
+
+    @property
+    def epoch(self):
+        """Returns the number of epochs already performed."""
+        return len(self.history)
+
+    def setting(self):
+        """Returns the setting of the experiment."""
+        return {'Net'                            : self.net,
+                'TrainSet'                       : self.train_set,
+                'ValSet'                         : self.val_set,
+                'Optimizer'                      : self.optimizer,
+                'AdvOptimizer'                   : self.adv_optimizer,
+                'StatsManager'                   : self.stats_manager,
+                'BatchSize'                      : self.batch_size,
+                'PerformValidationDuringTraining': self.perform_validation_during_training}
+
+    def __repr__(self):
+        """Pretty printer showing the setting of the experiment. This is what
+        is displayed when doing ``print(experiment)``. This is also what is
+        saved in the ``config.txt`` file.
+        """
+        string = ''
+        for key, val in self.setting().items():
+            string += '{}({})\n'.format(key, val)
+        return string
+
+    def state_dict(self):
+        """Returns the current state of the experiment."""
+        return {'Net'         : self.net.state_dict(),
+                'Optimizer'   : self.optimizer.state_dict(),
+                'AdvOptimizer': self.adv_optimizer.state_dict(),
+                'History'     : self.history}
+
+    def load_state_dict(self, checkpoint):
+        """Loads the experiment from the input checkpoint."""
+        self.net.load_state_dict(checkpoint['Net'])
+        self.optimizer.load_state_dict(checkpoint['Optimizer'])
+        self.adv_optimizer.load_state_dict(checkpoint['AdvOptimizer'])
+        self.history = checkpoint['History']
+
+        # The following loops are used to fix a bug that was
+        # discussed here: https://github.com/pytorch/pytorch/issues/2830
+        # (it is supposed to be fixed in recent PyTorch version)
+        for state in self.optimizer.state.values():
+            for k, v in state.items():
+                if isinstance(v, torch.Tensor):
+                    state[k] = v.to(self.net.device)
+
+        for adv_state in self.adv_optimizer.state.values():
+            for k, v in adv_state.items():
+                if isinstance(v, torch.Tensor):
+                    adv_state[k] = v.to(self.adv_net.device)
+
+    def save(self):
+        """Saves the experiment on disk, i.e, create/update the last checkpoint."""
+        torch.save(self.state_dict(), self.checkpoint_path)
+        with open(self.config_path, 'w') as f:
+            print(self, file=f)
+
+    def load(self):
+        """Loads the experiment from the last checkpoint saved on disk."""
+        checkpoint = torch.load(self.checkpoint_path,
+                                map_location=self.net.device)
+        self.load_state_dict(checkpoint)
+        del checkpoint
+
+    def run(self, num_epochs, plot=None):
         self.net.train()
+        self.adv_net.train()
         self.stats_manager.init()
         start_epoch = self.epoch
         print("Start/Continue training from epoch {}".format(start_epoch))
@@ -38,41 +148,80 @@ class AdaptiveExperiment(Experiment):
             if epoch % len_train_target == 0:
                 iter_target = iter(self.target_loader)
 
-            x_source, d_source = iter_source.next()
-            x_target, d_target = iter_target.next()
+            x_source, t_source = iter_source.next()
+            x_target, t_target = iter_target.next()
 
-            x_source, d_source = x_source.to(self.net.device), d_source.to(self.net.device)
-            x_target, d_target = x_target.to(self.net.device), d_target.to(self.net.device)
+            x_source, t_source = x_source.to(self.net.device), t_source.to(self.net.device)
+            x_target, t_target = x_target.to(self.net.device), t_target.to(self.net.device)
 
-            d_source = d_source.view([len(d_source), 1])
-            d_target = d_target.view([len(d_target), 1])
+            t_source = t_source.view([len(t_source), 1])
+            t_target = t_target.view([len(t_target), 1])
 
             x = {
                 'source': x_source,
                 'target': x_target
             }
 
-            d = {
-                'source': d_source,
-                'target': d_target
+            t = {
+                'source': t_source,
+                'target': t_target
             }
 
             self.optimizer.zero_grad()
-            y = self.net.forward(x)
-            loss = self.net.criterion(y, d)
-            loss.backward()
+            self.adv_optimizer.zero_grad()
+            features_source, outputs_source = self.net.forward(x['source'])
+            features_target, outputs_target = self.net.forward(x['target'])
+
+            features = {
+                'source': features_source,
+                'target': features_target
+            }
+
+            outputs = {
+                'source': outputs_source,
+                'target': outputs_target
+            }
+
+            cdan_loss = CDAN([features, outputs], self.adver_net)
+            loss = self.net.criterion(outputs['source'], t['source'])
+            total_loss = loss + cdan_loss * self.config['cdan_hypara']
+            total_loss.backward()
             self.optimizer.step()
+            self.adv_optimizer.step()
+
+            print('Epoch: {}, regre-loss: {}, total-loss: {}'.format(self.epoch, loss.item(), total_loss.item()))
             with torch.no_grad():
-                self.stats_manager.accumulate(loss.item(), x, y, d)
+                self.stats_manager.accumulate(loss.item(), None, None,
+                                              None)  # x,outputs, t are not used by stats manager
 
             if not self.perform_validation_during_training:
                 self.history.append(self.stats_manager.summarize())
             else:
                 self.history.append(
-                    (self.stats_manager.summarize(), self.evaluate()))
+                        (self.stats_manager.summarize(), self.evaluate()))
             print("Epoch {} (Time: {:.2f}s)".format(
-                self.epoch, time.time() - s))
+                    self.epoch, time.time() - s))
             self.save()
             if plot is not None:
                 plot(self)
         print("Finish training for {} epochs".format(num_epochs))
+
+    def evaluate(self):
+        self.stats_manager.init()
+        self.net.eval()
+        with torch.no_grad():
+            for x, d in self.val_loader:
+                x, d = x.to(self.net.device), d.to(self.net.device)
+                d = d.view([len(d), 1])
+                f, y = self.net.forward(x)
+                loss = self.net.criterion(y, d)
+                self.stats_manager.accumulate(loss.item(), x, y, d)
+        self.net.train()
+        output = self.stats_manager.summarize()
+
+        if output <= self.best_loss:
+            self.best_loss = output
+            torch.save(self.net, self.output_dir + "/best-model.pt")
+
+        print('Epoch: {}, validation regres loss: {}'.format(self.epoch, output))
+        return output
