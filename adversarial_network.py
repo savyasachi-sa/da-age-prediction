@@ -2,6 +2,8 @@ from torch import nn
 
 from nntools import NeuralNetwork
 from utils import init_weights
+from functions import ReverseLayerF
+import numpy as np
 
 
 class AdverserialNetwork(NeuralNetwork):
@@ -17,14 +19,19 @@ class AdverserialNetwork(NeuralNetwork):
         self.sigmoid = nn.Sigmoid()
         self.apply(init_weights)
 
-    def forward(self, x):
-        x = self.ad_layer1(x)
-        x = self.relu1(x)
-        x = self.dropout1(x)
-        x = self.ad_layer2(x)
-        x = self.relu2(x)
-        x = self.dropout2(x)
-        y = self.ad_layer3(x)
+    def calc_coeff(iter_num, high=1.0, low=0.0, alpha=10.0, max_iter=10000.0):
+        return np.float(2.0 * (high - low) / (1.0 + np.exp(-alpha * iter_num / max_iter)) - (high - low) + low)
+
+    def forward(self, x, iter_num):
+        coefficient = self.calc_coeff(iter_num)
+        reversed_x = ReverseLayerF.apply(x, coefficient)
+        f = self.ad_layer1(reversed_x)
+        f = self.relu1(f)
+        f = self.dropout1(f)
+        f = self.ad_layer2(f)
+        f = self.relu2(f)
+        f = self.dropout2(f)
+        y = self.ad_layer3(f)
         y = self.sigmoid(y)
         return y
 

@@ -25,9 +25,9 @@ class AdaptiveExperiment(object):
         self.best_loss = 1e6
 
         # Define data loaders
-        train_loader = td.DataLoader(train_set, batch_size=batch_size, shuffle=True,
+        self.train_loader = td.DataLoader(train_set, batch_size=batch_size, shuffle=True,
                                      pin_memory=True)
-        val_loader = td.DataLoader(val_set, batch_size=batch_size, shuffle=False,
+        self.val_loader = td.DataLoader(val_set, batch_size=batch_size, shuffle=False,
                                    pin_memory=True)
         self.target_loader = td.DataLoader(train_set, batch_size=config['batch_size'], shuffle=True,
                                            pin_memory=True)
@@ -182,14 +182,18 @@ class AdaptiveExperiment(object):
                 'target': outputs_target
             }
 
-            cdan_loss = CDAN([features, outputs], self.adver_net)
+
+
+
+
+            cdan_loss = CDAN(features, self.adv_net, self.epoch)
             loss = self.net.criterion(outputs['source'], t['source'])
             total_loss = loss + cdan_loss * self.config['cdan_hypara']
             total_loss.backward()
             self.optimizer.step()
             self.adv_optimizer.step()
 
-            print('Epoch: {}, regre-loss: {}, total-loss: {}'.format(self.epoch, loss.item(), total_loss.item()))
+            print('Epoch: {}, TRAIN, rgre_loss: {}, total_loss: {}'.format(self.epoch, loss.item(), total_loss.item()))
             with torch.no_grad():
                 self.stats_manager.accumulate(loss.item(), None, None,
                                               None)  # x,outputs, t are not used by stats manager
@@ -209,19 +213,34 @@ class AdaptiveExperiment(object):
     def evaluate(self):
         self.stats_manager.init()
         self.net.eval()
+        val_loss = 0
+        tar_loss = 0
         with torch.no_grad():
             for x, d in self.val_loader:
                 x, d = x.to(self.net.device), d.to(self.net.device)
                 d = d.view([len(d), 1])
                 f, y = self.net.forward(x)
                 loss = self.net.criterion(y, d)
-                self.stats_manager.accumulate(loss.item(), x, y, d)
+                val_loss += loss
+                # self.stats_manager.accumulate(loss.item(), x, y, d)
+
+        with torch.no_grad():
+            for x, d in self.target_loader:
+                x, d = x.to(self.net.device), d.to(self.net.device)
+                d = d.view([len(d), 1])
+                f, y = self.net.forward(x)
+                loss = self.net.criterion(y, d)
+                tar_loss += loss
+                # self.stats_manager.accumulate(loss.item(), x, y, d)
+
         self.net.train()
         output = self.stats_manager.summarize()
 
         if output <= self.best_loss:
             self.best_loss = output
             torch.save(self.net, self.output_dir + "/best-model.pt")
+        print('Epoch: {}', self.epoch)
+        print('VAL_rgre_loss: {}'.format(val_loss/len(self.val_loader)))
+        print('TAR_rgre_loss: {}'.format(tar_loss/len(self.target_loader)))
 
-        print('Epoch: {}, validation regres loss: {}'.format(self.epoch, output))
         return output
