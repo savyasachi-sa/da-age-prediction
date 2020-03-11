@@ -39,7 +39,7 @@ class ResnetAdaptive(NeuralNetwork):
         )
 
         self.fc.apply(init_weights)
-        self.criterion = nn.SmoothL1Loss()
+        self.loss = nn.SmoothL1Loss()
 
 
     def forward(self, x):
@@ -52,4 +52,4 @@ class ResnetAdaptive(NeuralNetwork):
         return self.feature_size
 
     def criterion(self, y, d):
-        return self.criterion(y, d)
+        return self.loss(y, d)
