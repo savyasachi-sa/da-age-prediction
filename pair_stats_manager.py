@@ -1,4 +1,4 @@
-import nntools as nt
+import nntools2 as nt
 import torch
 
 

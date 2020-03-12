@@ -10,7 +10,7 @@ class PermuteExperiment(nntools2.Experiment):
     def __init__(self, net, train_set, val_set, stats_manager, optimizer, config,
                  output_dir=None, perform_validation_during_training=False):
         super(PermuteExperiment, self).__init__(net, train_set, val_set, stats_manager, optimizer, config,
-                 output_dir=None, perform_validation_during_training=False)
+                 output_dir, perform_validation_during_training)
     
     def run(self, num_epochs, plot=None):
         torch.cuda.empty_cache()
