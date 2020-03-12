@@ -139,12 +139,14 @@ class Experiment(object):
             set and the validation set. (default: False)
     """
 
-    def __init__(self, net, train_set, val_set, stats_manager, optimizer, config,
+    def __init__(self, net, train_set, val_set, stats_manager, optimizer,  config,
                  output_dir=None, perform_validation_during_training=False):
 
         batch_size = config['batch_size']
         learning_rate = config['learning_rate']
         num_workers = config['num_workers']
+
+
 
         self.best_loss = 1e6
 
@@ -224,6 +226,7 @@ class Experiment(object):
                 if isinstance(v, torch.Tensor):
                     state[k] = v.to(self.net.device)
 
+
     def save(self):
         """Saves the experiment on disk, i.e, create/update the last checkpoint."""
         torch.save(self.state_dict(), self.checkpoint_path)
@@ -255,6 +258,7 @@ class Experiment(object):
                 on ``stdout`` or save statistics in a log file. (default: None)
         """
         self.net.train()
+        self.adv_net.train()
         self.stats_manager.init()
         start_epoch = self.epoch
         print("Start/Continue training from epoch {}".format(start_epoch))
@@ -267,10 +271,12 @@ class Experiment(object):
                 x, d = x.to(self.net.device), d.to(self.net.device)
                 d = d.view([len(d), 1])
                 self.optimizer.zero_grad()
+                self.adv_optimizer.zero_grad()
                 y = self.net.forward(x)
                 loss = self.net.criterion(y, d)
                 loss.backward()
                 self.optimizer.step()
+                self.adv_optimizer.step()
                 with torch.no_grad():
                     self.stats_manager.accumulate(loss.item(), x, y, d)
             if not self.perform_validation_during_training:
