@@ -43,10 +43,10 @@ class ResnetAdaptive(NeuralNetwork):
 
 
     def forward(self, x):
-        x = self.feature_layers(x)
-        x = x.view(x.size(0), -1)
-        y = self.fc(x)
-        return x, y
+        f = self.feature_layers(x)
+        f = f.view(f.size(0), -1)
+        y = self.fc(f)
+        return f, y
 
     def feature_size(self):
         return self.feature_size
