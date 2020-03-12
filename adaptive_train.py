@@ -36,7 +36,8 @@ if __name__ == "__main__":
     take_conv = REGRESSOR_CONF['adaptive_layers_conf']['conv']
     if (take_conv):
         adv_in_feature += feature_sizes[0]
-    adv_in_feature += sum(feature_sizes[n_fc[0]:n_fc[-1]+1])
+    if( len(n_fc) > 0 ):
+        adv_in_feature += sum(feature_sizes[n_fc[0]:n_fc[-1]+1])
     net = ResnetAdaptive(REGRESSOR_CONF['feature_sizes'], REGRESSOR_CONF['finetune'])
     adver_net = AdverserialNetwork(adv_in_feature, ADV_CONF['hidden_size'])
     net = net.to(DEVICE)
@@ -46,7 +47,7 @@ if __name__ == "__main__":
     optimizer_adv = torch.optim.Adam(adver_net.parameters(), lr=BASELINE_CONFIG['learning_rate'])
     exp = AdaptiveExperiment(net, adver_net, train_dataset, val_dataset, target_dataset, stats_manager, optimizer,
                              optimizer_adv, BASELINE_CONFIG,
-                             output_dir="adaptive_v2",
+                             output_dir="adaptive_fc1_2_3_o",
                              perform_validation_during_training=True)
 
     # Run Experiment
