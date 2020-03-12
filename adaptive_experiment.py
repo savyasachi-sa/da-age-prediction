@@ -144,11 +144,10 @@ class AdaptiveExperiment(object):
             len_train_target = len(self.target_loader)
 
             if epoch % len_train_source == 0:
-                if(epoch - len_train_source >= 0):
+                if (epoch - len_train_source >= 0):
                     epoch_loss = self.history[(epoch - len_train_source):epoch]
-                    t_l = [e[0] for e in epoch_loss]
-                    v_l = [e[1] for e in epoch_loss]
-                    print("**** Parent epoch now ***** ", sum(t_l)/len(t_l), sum(v_l)/len(v_l))
+                    t_l = [e for e in epoch_loss]
+                    print("**** Parent epoch now ***** ", sum(t_l) / len(t_l))
 
                 iter_source = iter(self.train_loader)
             if epoch % len_train_target == 0:
@@ -226,14 +225,14 @@ class AdaptiveExperiment(object):
                 val_loss += loss
                 self.stats_manager.accumulate(loss.item(), x, y, d)
 
-#         with torch.no_grad():
-#             for x, d in self.target_loader:
-#                 x, d = x.to(self.net.device), d.to(self.net.device)
-#                 d = d.view([len(d), 1])
-#                 f, y = self.net.forward(x)
-#                 loss = self.net.criterion(y, d)
-#                 tar_loss += loss
-#                 # self.stats_manager.accumulate(loss.item(), x, y, d)
+        #         with torch.no_grad():
+        #             for x, d in self.target_loader:
+        #                 x, d = x.to(self.net.device), d.to(self.net.device)
+        #                 d = d.view([len(d), 1])
+        #                 f, y = self.net.forward(x)
+        #                 loss = self.net.criterion(y, d)
+        #                 tar_loss += loss
+        #                 # self.stats_manager.accumulate(loss.item(), x, y, d)
 
         self.net.train()
         output = self.stats_manager.summarize()
@@ -242,8 +241,7 @@ class AdaptiveExperiment(object):
             self.best_loss = output
             torch.save(self.net, self.output_dir + "/best-model.pt")
         print('Epoch: {}', self.epoch)
-        print('VAL_rgre_loss: {}'.format(val_loss/len(self.val_loader)))
-#         print('TAR_rgre_loss: {}'.format(tar_loss/len(self.target_loader)))
-
+        # print('VAL_rgre_loss: {}'.format(val_loss / len(self.val_loader)))
+        # print('TAR_rgre_loss: {}'.format(tar_loss/len(self.target_loader)))
 
         return output

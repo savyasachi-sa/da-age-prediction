@@ -1,5 +1,5 @@
 from adaptive_experiment import AdaptiveExperiment
-#from adaptive_regressor import AdaptiveRegressor
+# from adaptive_regressor import AdaptiveRegressor
 from adaptive_resnet import ResnetAdaptive
 from adversarial_network import AdverserialNetwork
 from dataset import UTK
@@ -30,8 +30,15 @@ if __name__ == "__main__":
 
     # Setup Experiment
     print(DEVICE)
-    net = ResnetAdaptive(REGRESSOR_CONF['feature_size'], REGRESSOR_CONF['finetune'])
-    adver_net = AdverserialNetwork(REGRESSOR_CONF['feature_size'], ADV_CONF['hidden_size'])
+    adv_in_feature = 0
+    feature_sizes = REGRESSOR_CONF['feature_sizes']
+    n_fc = REGRESSOR_CONF['adaptive_layers_conf']['n_fc']
+    take_conv = REGRESSOR_CONF['adaptive_layers_conf']['conv']
+    if (take_conv):
+        adv_in_feature += feature_sizes[0]
+    adv_in_feature += sum(feature_sizes[n_fc[0]:n_fc[-1]+1])
+    net = ResnetAdaptive(REGRESSOR_CONF['feature_sizes'], REGRESSOR_CONF['finetune'])
+    adver_net = AdverserialNetwork(adv_in_feature, ADV_CONF['hidden_size'])
     net = net.to(DEVICE)
     adver_net = adver_net.to(DEVICE)
     stats_manager = StatsManager()
@@ -39,9 +46,8 @@ if __name__ == "__main__":
     optimizer_adv = torch.optim.Adam(adver_net.parameters(), lr=BASELINE_CONFIG['learning_rate'])
     exp = AdaptiveExperiment(net, adver_net, train_dataset, val_dataset, target_dataset, stats_manager, optimizer,
                              optimizer_adv, BASELINE_CONFIG,
-                             output_dir="adaptive",
+                             output_dir="adaptive_v2",
                              perform_validation_during_training=True)
 
     # Run Experiment
-
     exp.run(num_epochs=BASELINE_CONFIG['num_epochs'], plot=lambda e: report_loss(e))

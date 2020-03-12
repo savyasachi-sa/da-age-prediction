@@ -22,13 +22,15 @@ DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 WINDOW_THRESH = 3
 
-
-
 REGRESSOR_CONF = {
-    'finetune' : True,
-    'feature_size': 2048
+    'finetune'            : True,
+    'feature_sizes'       : [2048, 1024, 256, 128, 1], #0th - conv, then fcs, last is '1' by default.
+    'adaptive_layers_conf': {
+        'n_fc': [1, 2, 3],  # 0 == first fc layer to adapt
+        'conv': True
+    }
 }
 
 ADV_CONF = {
-    'hidden_size' : 256
+    'hidden_size': 128
 }
