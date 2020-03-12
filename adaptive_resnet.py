@@ -44,7 +44,7 @@ class ResnetAdaptive(NeuralNetwork):
 
     def forward(self, x):
         f = self.feature_layers(x)
-        f = f.view(f.size(0), -1)
+        f = f.squeeze()
         y = self.fc(f)
         return f, y
 

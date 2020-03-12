@@ -2,12 +2,12 @@ import torch
 
 # Change These
 
-DATASET_ROOT_DIRECTORY = "./data/utk/"
+DATASET_ROOT_DIRECTORY = "../../da-age-prediction/data/utk/"
 
 BASELINE_CONFIG = {
     'learning_rate': 1e-3,
-    'batch_size': 2,
-    'num_workers': 4,
+    'batch_size': 16,
+    'num_workers': 16,
     'num_epochs': 100,
     'cdan_hypara': 1.0
 }
@@ -26,9 +26,9 @@ WINDOW_THRESH = 3
 
 REGRESSOR_CONF = {
     'finetune' : True,
-    'feature_size': 256
+    'feature_size': 2048
 }
 
 ADV_CONF = {
-    'hidden_size' : 128
+    'hidden_size' : 256
 }

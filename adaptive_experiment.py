@@ -160,8 +160,8 @@ class AdaptiveExperiment(object):
             x_source, t_source = x_source.to(self.net.device), t_source.to(self.net.device)
             x_target, t_target = x_target.to(self.net.device), t_target.to(self.net.device)
 
-            t_source = t_source.view([len(t_source), 1])
-            t_target = t_target.view([len(t_target), 1])
+            t_source = t_source.unsqueeze(1)
+            t_target = t_target.unsqueeze(1)
 
             x = {
                 'source': x_source,
@@ -202,9 +202,9 @@ class AdaptiveExperiment(object):
 
             if not self.perform_validation_during_training:
                 self.history.append(self.stats_manager.summarize())
-            else:
-                self.history.append(
-                        (self.stats_manager.summarize(), self.evaluate()))
+            # else:
+            #     self.history.append(
+            #             (self.stats_manager.summarize(), self.evaluate()))
             print("Epoch {} (Time: {:.2f}s)".format(
                     self.epoch, time.time() - s))
             self.save()
