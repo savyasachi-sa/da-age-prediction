@@ -16,7 +16,7 @@ class AgeStatsManager(nt.StatsManager):
         super(AgeStatsManager, self).accumulate(loss, x, y, d)
         if self.rank:
             # compute the window_acc based on threshold on the prediction
-            win_acc_per_batch = torch.mean((torch.abs(y[0,:] - d[0,:]) <= self.win_thresh).float())
+            win_acc_per_batch = torch.mean((torch.abs(y[:,0] - d[:,0]) <= self.win_thresh).float())
         else:
             win_acc_per_batch = torch.mean((torch.abs(y - d) <= self.win_thresh).float())
         self.running_win_acc += win_acc_per_batch
