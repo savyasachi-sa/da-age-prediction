@@ -202,9 +202,9 @@ class AdaptiveExperiment(object):
 
             if not self.perform_validation_during_training:
                 self.history.append(self.stats_manager.summarize())
-            # else:
-            #     self.history.append(
-            #             (self.stats_manager.summarize(), self.evaluate()))
+            else:
+                self.history.append(
+                        (self.stats_manager.summarize(), self.evaluate()))
             print("Epoch {} (Time: {:.2f}s)".format(
                     self.epoch, time.time() - s))
             self.save()
