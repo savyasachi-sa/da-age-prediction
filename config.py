@@ -6,10 +6,10 @@ DATASET_ROOT_DIRECTORY = "../../da-age-prediction/data/utk/"
 
 BASELINE_CONFIG = {
     'learning_rate': 1e-3,
-    'batch_size': 16,
-    'num_workers': 16,
-    'num_epochs': 100,
-    'cdan_hypara': 1.0
+    'batch_size'   : 16,
+    'num_workers'  : 16,
+    'num_epochs'   : 100,
+    'cdan_hypara'  : 1.0
 }
 
 # Need Not Change These
@@ -24,10 +24,10 @@ WINDOW_THRESH = 3
 
 REGRESSOR_CONF = {
     'finetune'            : True,
-    'feature_sizes'       : [2048, 1024, 256, 128, 1], #0th - conv, then fcs, last is '1' by default.
+    'feature_sizes'       : [2048, 1024, 256, 128, 1],  # 0th - conv, then fcs, last is '1' by default.
     'adaptive_layers_conf': {
-        'n_fc': [1, 2, 3],  # 0 == first fc layer to adapt
-        'conv': True
+        'n_fc': [1, 2, 3],  # 1 == first fc layer to adapt
+        'conv': True  # adapt conv layer (before first fc)
     }
 }
 
