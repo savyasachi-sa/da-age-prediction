@@ -4,12 +4,25 @@ from nntools import NeuralNetwork
 from utils import init_weights
 from functions import ReverseLayerF
 import numpy as np
+from config import *
 
 
 class AdverserialNetwork(NeuralNetwork):
-    def __init__(self, in_features, hidden_size=128):
+    def __init__(self):
         super().__init__()
-        self.ad_layer1 = nn.Linear(in_features, hidden_size)
+
+        adv_in_feature = 0
+        feature_sizes = REGRESSOR_CONF['feature_sizes']
+        n_fc = REGRESSOR_CONF['adaptive_layers_conf']['n_fc']
+        take_conv = REGRESSOR_CONF['adaptive_layers_conf']['conv']
+        if (take_conv):
+            adv_in_feature += feature_sizes[0]
+        if (len(n_fc) > 0):
+            adv_in_feature += sum(feature_sizes[n_fc[0]:n_fc[-1] + 1])
+
+        hidden_size = ADV_CONF['hidden_size']
+
+        self.ad_layer1 = nn.Linear(adv_in_feature, hidden_size)
         self.ad_layer2 = nn.Linear(hidden_size, hidden_size)
         self.ad_layer3 = nn.Linear(hidden_size, 1)
         self.relu1 = nn.ReLU()

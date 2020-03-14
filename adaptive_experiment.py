@@ -1,35 +1,40 @@
-from nntools import *
-import time
-import torch
-import torch.utils.data as td
-from loss_funcs import *
+from dataset_factory import get_datasets
+from cdan import *
 import os
 import time
 import torch
-from torch import nn
 import torch.utils.data as td
-from abc import ABC, abstractmethod
 
 
 class AdaptiveExperiment(object):
 
-    def __init__(self, net, adver_net, train_set, val_set, target_set, stats_manager, optimizer, optimizer_adv, config,
+    def __init__(self, net, adver_net, stats_manager,
                  output_dir=None, perform_validation_during_training=False):
 
+        config = ROOT_CONFIG
         batch_size = config['batch_size']
         learning_rate = config['learning_rate']
         num_workers = config['num_workers']
+
+        net = net.to(DEVICE)
+        adver_net = adver_net.to(DEVICE)
+
+        optimizer = torch.optim.Adam(net.parameters(), lr=config['learning_rate'])
+        optimizer_adv = torch.optim.Adam(adver_net.parameters(), lr=config['learning_rate'])
+
         self.config = config
         self.adv_net = adver_net
         self.adv_optimizer = optimizer_adv
         self.best_loss = 1e6
 
+        train_dataset, val_dataset, target_dataset = get_datasets()
+
         # Define data loaders
-        self.train_loader = td.DataLoader(train_set, batch_size=batch_size, shuffle=True,
+        self.train_loader = td.DataLoader(train_dataset, batch_size=batch_size, shuffle=True,
                                           pin_memory=True)
-        self.val_loader = td.DataLoader(val_set, batch_size=batch_size, shuffle=False,
+        self.val_loader = td.DataLoader(val_dataset, batch_size=batch_size, shuffle=False,
                                         pin_memory=True)
-        self.target_loader = td.DataLoader(train_set, batch_size=config['batch_size'], shuffle=True,
+        self.target_loader = td.DataLoader(target_dataset, batch_size=batch_size, shuffle=True,
                                            pin_memory=True)
         # Initialize history
         history = []
@@ -64,13 +69,14 @@ class AdaptiveExperiment(object):
 
     def setting(self):
         """Returns the setting of the experiment."""
-        return {'Net'                            : self.net,
-                'TrainSet'                       : self.train_set,
-                'ValSet'                         : self.val_set,
-                'Optimizer'                      : self.optimizer,
-                'AdvOptimizer'                   : self.adv_optimizer,
-                'StatsManager'                   : self.stats_manager,
-                'BatchSize'                      : self.batch_size,
+        return {'Net': self.net,
+                "AdvNet": self.adv_net,
+                'TrainSet': self.train_dataset,
+                'ValSet': self.val_dataset,
+                'Optimizer': self.optimizer,
+                'AdvOptimizer': self.adv_optimizer,
+                'StatsManager': self.stats_manager,
+                'BatchSize': self.batch_size,
                 'PerformValidationDuringTraining': self.perform_validation_during_training}
 
     def __repr__(self):
@@ -85,14 +91,16 @@ class AdaptiveExperiment(object):
 
     def state_dict(self):
         """Returns the current state of the experiment."""
-        return {'Net'         : self.net.state_dict(),
-                'Optimizer'   : self.optimizer.state_dict(),
+        return {'Net': self.net.state_dict(),
+                'AdvNet': self.adv_net.state_dict(),
+                'Optimizer': self.optimizer.state_dict(),
                 'AdvOptimizer': self.adv_optimizer.state_dict(),
-                'History'     : self.history}
+                'History': self.history}
 
     def load_state_dict(self, checkpoint):
         """Loads the experiment from the input checkpoint."""
         self.net.load_state_dict(checkpoint['Net'])
+        self.adv_net.load_state_dict(checkpoint['AdvNet'])
         self.optimizer.load_state_dict(checkpoint['Optimizer'])
         self.adv_optimizer.load_state_dict(checkpoint['AdvOptimizer'])
         self.history = checkpoint['History']
@@ -174,8 +182,8 @@ class AdaptiveExperiment(object):
 
             self.optimizer.zero_grad()
             self.adv_optimizer.zero_grad()
-            features_source, outputs_source = self.net.forward(x['source'])
-            features_target, outputs_target = self.net.forward(x['target'])
+            features_source, outputs_source = self.net.forward_adaptive(x['source'])
+            features_target, outputs_target = self.net.forward_adaptive(x['target'])
 
             features = {
                 'source': features_source,
@@ -203,9 +211,9 @@ class AdaptiveExperiment(object):
                 self.history.append(self.stats_manager.summarize())
             else:
                 self.history.append(
-                        (self.stats_manager.summarize(), self.evaluate()))
+                    (self.stats_manager.summarize(), self.evaluate()))
             print("Epoch {} (Time: {:.2f}s)".format(
-                    self.epoch, time.time() - s))
+                self.epoch, time.time() - s))
             self.save()
             if plot is not None:
                 plot(self)
@@ -219,8 +227,7 @@ class AdaptiveExperiment(object):
         with torch.no_grad():
             for x, d in self.val_loader:
                 x, d = x.to(self.net.device), d.to(self.net.device)
-                d = d.view([len(d), 1])
-                f, y = self.net.forward(x)
+                f, y = self.net.forward_adaptive(x)
                 loss = self.net.criterion(y, d)
                 val_loss += loss
                 self.stats_manager.accumulate(loss.item(), x, y, d)

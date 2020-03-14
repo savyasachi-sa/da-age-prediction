@@ -1,5 +1,6 @@
 #Data
 data/
+models/
 
 # Editors
 .vscode/

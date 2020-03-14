@@ -1,4 +1,4 @@
-from dataset_inceptionV3 import UTK
+from archive.dataset_inceptionV3 import UTK
 from dataset_design import DatasetDesign
 from nntools import Experiment
 from stats_manager import AgeStatsManager

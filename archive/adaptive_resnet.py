@@ -1,30 +1,27 @@
-# from baseline_resnet import BaselineResnet
-import torch.nn as nn
 import torchvision.models as models
 from nntools import NeuralNetwork
-import torch
 from utils import *
 from config import *
 
 
 class ResnetAdaptive(NeuralNetwork):
-    def __init__(self, feature_sizes=[], fine_tuning=True):
+    def __init__(self, fine_tuning=True):
         super().__init__()
         self.adapt_conf = REGRESSOR_CONF['adaptive_layers_conf']
-        self.fs = feature_sizes
+        self.fs = REGRESSOR_CONF['feature_sizes']
         self.resnet = models.resnet50(pretrained=True)
         for param in self.resnet.parameters():
             param.requires_grad = fine_tuning
         self.feature_layers = nn.Sequential(
-                self.resnet.conv1,
-                self.resnet.bn1,
-                self.resnet.relu,
-                self.resnet.maxpool,
-                self.resnet.layer1,
-                self.resnet.layer2,
-                self.resnet.layer3,
-                self.resnet.layer4,
-                self.resnet.avgpool
+            self.resnet.conv1,
+            self.resnet.bn1,
+            self.resnet.relu,
+            self.resnet.maxpool,
+            self.resnet.layer1,
+            self.resnet.layer2,
+            self.resnet.layer3,
+            self.resnet.layer4,
+            self.resnet.avgpool
         )
 
         self.fc = nn.ModuleList([
@@ -56,15 +53,13 @@ class ResnetAdaptive(NeuralNetwork):
         fc_idx = 0
         for idx, layer in enumerate(self.fc):
             y = layer(y)
-            if( layer.__class__.__name__ == 'Linear' ):
-                fc_idx+=1
-                if (fc_idx in self.adapt_conf['n_fc']):
+            if isinstance(layer, nn.Linear):
+                fc_idx += 1
+                if fc_idx in self.adapt_conf['n_fc']:
                     layers_adapt += (y,)
-
 
         f_all = torch.cat(layers_adapt, dim=1)
         return f_all, y
-
 
     def feature_size(self):
         return self.feature_size

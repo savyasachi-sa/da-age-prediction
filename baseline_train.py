@@ -1,8 +1,6 @@
-from dataset import UTK
-from dataset_design import DatasetDesign
+from final_resnet import FinalResnet
 from nntools import Experiment
 from stats_manager import AgeStatsManager
-from baseline_resnet import BaselineResnet
 from config import *
 import matplotlib.pyplot as plt
 import os
@@ -32,38 +30,22 @@ def plot_separate(exp: Experiment, output_dir, plot_type='accuracy'):
     if not os.path.exists(plots_path):
         os.mkdir(plots_path)
     plt.savefig(plots_path + '/plot_training_{}.png'.format(plot_type))
-    
+
     plt.clf()
     plt.xlabel('Epoch')
     plt.ylabel('Validation ' + plot_type.upper()[0] + plot_type[1:])
     plt.plot([exp.history[k][1][plot_type] for k in range(exp.epoch)], label="validation_{}".format(plot_type))
     plt.legend()
     plots_path = os.path.join(output_dir, "plots")
-    
+
     if not os.path.exists(plots_path):
         os.mkdir(plots_path)
     plt.savefig(plots_path + '/plot_validation_{}.png'.format(plot_type))
 
 
-ethnicity = {
-    "source": 0,
-    "target": 1,
-}
+def train(experiment_name, stats_manager=AgeStatsManager(WINDOW_THRESH)):
+    net = FinalResnet()
+    exp = Experiment(net, stats_manager, output_dir=experiment_name,
+                     perform_validation_during_training=True)
 
-# Build Dataset
-source_val_split_percentage = 80
-_dataset = DatasetDesign(ethnicity, source_val_split_percentage)
-train_dataset = UTK(SOURCE_TRAIN_PATH, random_flips=True)
-val_dataset = UTK(SOURCE_VAL_PATH, random_flips=False)
-
-# Setup Experiment
-net = BaselineResnet()
-net = net.to(DEVICE)
-stats_manager = AgeStatsManager(WINDOW_THRESH)
-optimizer = torch.optim.Adam(net.parameters(), lr=BASELINE_CONFIG['learning_rate'])
-exp = Experiment(net, train_dataset, val_dataset, stats_manager, optimizer, BASELINE_CONFIG, output_dir="baseline",
-                 perform_validation_during_training=True)
-
-# Run Experiment
-
-exp.run(num_epochs=10, plot=lambda e: report_loss(e, output_dir='./baseline'))
+    exp.run(num_epochs=ROOT_CONFIG['num_epochs'], plot=lambda e: report_loss(e, output_dir=experiment_name))

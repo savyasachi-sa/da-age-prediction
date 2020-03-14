@@ -6,10 +6,11 @@ Copyright 2019. Charles Deledalle, Sneha Gupta, Anurag Paul, Inderjot Saggu.
 
 import os
 import time
-import torch
 from torch import nn
 import torch.utils.data as td
 from abc import ABC, abstractmethod
+from config import *
+from dataset_factory import get_datasets
 
 
 class NeuralNetwork(nn.Module, ABC):
@@ -139,22 +140,27 @@ class Experiment(object):
             set and the validation set. (default: False)
     """
 
-    def __init__(self, net, train_set, val_set, stats_manager, optimizer,  config,
+    def __init__(self, net, stats_manager,
                  output_dir=None, perform_validation_during_training=False):
 
-        batch_size = config['batch_size']
-        learning_rate = config['learning_rate']
-        num_workers = config['num_workers']
+        batch_size = ROOT_CONFIG['batch_size']
+        learning_rate = ROOT_CONFIG['learning_rate']
+        num_workers = ROOT_CONFIG['num_workers']
 
-
+        net = net.to(DEVICE)
+        optimizer = torch.optim.Adam(net.parameters(), lr=ROOT_CONFIG['learning_rate'])
 
         self.best_loss = 1e6
 
+        train_dataset, val_dataset, target_dataset = get_datasets()
+
         # Define data loaders
-        train_loader = td.DataLoader(train_set, batch_size=batch_size, shuffle=True,
+        train_loader = td.DataLoader(train_dataset, batch_size=batch_size, shuffle=True,
                                      pin_memory=True)
-        val_loader = td.DataLoader(val_set, batch_size=batch_size, shuffle=False,
+        val_loader = td.DataLoader(val_dataset, batch_size=batch_size, shuffle=False,
                                    pin_memory=True)
+        target_loader = td.DataLoader(target_dataset, batch_size=batch_size, shuffle=False,
+                                      pin_memory=True)
         # Initialize history
         history = []
 
@@ -189,8 +195,8 @@ class Experiment(object):
     def setting(self):
         """Returns the setting of the experiment."""
         return {'Net': self.net,
-                'TrainSet': self.train_set,
-                'ValSet': self.val_set,
+                'TrainSet': self.train_dataset,
+                'ValSet': self.val_dataset,
                 'Optimizer': self.optimizer,
                 'StatsManager': self.stats_manager,
                 'BatchSize': self.batch_size,
@@ -226,7 +232,6 @@ class Experiment(object):
                 if isinstance(v, torch.Tensor):
                     state[k] = v.to(self.net.device)
 
-
     def save(self):
         """Saves the experiment on disk, i.e, create/update the last checkpoint."""
         torch.save(self.state_dict(), self.checkpoint_path)
@@ -258,7 +263,6 @@ class Experiment(object):
                 on ``stdout`` or save statistics in a log file. (default: None)
         """
         self.net.train()
-        self.adv_net.train()
         self.stats_manager.init()
         start_epoch = self.epoch
         print("Start/Continue training from epoch {}".format(start_epoch))
@@ -269,14 +273,11 @@ class Experiment(object):
             self.stats_manager.init()
             for x, d in self.train_loader:
                 x, d = x.to(self.net.device), d.to(self.net.device)
-                d = d.view([len(d), 1])
                 self.optimizer.zero_grad()
-                self.adv_optimizer.zero_grad()
                 y = self.net.forward(x)
                 loss = self.net.criterion(y, d)
                 loss.backward()
                 self.optimizer.step()
-                self.adv_optimizer.step()
                 with torch.no_grad():
                     self.stats_manager.accumulate(loss.item(), x, y, d)
             if not self.perform_validation_during_training:
@@ -301,7 +302,6 @@ class Experiment(object):
         with torch.no_grad():
             for x, d in self.val_loader:
                 x, d = x.to(self.net.device), d.to(self.net.device)
-                d = d.view([len(d), 1])
                 y = self.net.forward(x)
                 loss = self.net.criterion(y, d)
                 self.stats_manager.accumulate(loss.item(), x, y, d)

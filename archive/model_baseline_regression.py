@@ -4,8 +4,7 @@ from torch import optim
 from dataset import UTK
 from dataset_design import DatasetDesign
 from torch.utils.data import DataLoader
-import model_selection
-from matplotlib import pyplot as plt
+from archive import model_selection
 
 src = '/Users/vulcan/da-age-prediction/Data/utk/'
 ethnicity = {

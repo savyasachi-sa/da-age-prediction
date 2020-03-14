@@ -1,5 +1,4 @@
-from pairwise_rank_dataset import PairwiseUTK
-from dataset import UTK
+from baseline.pairwise_rank_dataset import PairwiseUTK
 from dataset_design import DatasetDesign
 from nntools2 import Experiment
 from stats_manager import AgeStatsManager
