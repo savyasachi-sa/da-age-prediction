@@ -38,6 +38,7 @@ class AdaptiveExperiment(object):
                                            pin_memory=True)
         # Initialize history
         history = []
+        stats = []
 
         # Define checkpoint paths
         if output_dir is None:
@@ -95,7 +96,8 @@ class AdaptiveExperiment(object):
                 'AdvNet': self.adv_net.state_dict(),
                 'Optimizer': self.optimizer.state_dict(),
                 'AdvOptimizer': self.adv_optimizer.state_dict(),
-                'History': self.history}
+                'History': self.history,
+                'Stats': self.stats}
 
     def load_state_dict(self, checkpoint):
         """Loads the experiment from the input checkpoint."""
@@ -104,6 +106,7 @@ class AdaptiveExperiment(object):
         self.optimizer.load_state_dict(checkpoint['Optimizer'])
         self.adv_optimizer.load_state_dict(checkpoint['AdvOptimizer'])
         self.history = checkpoint['History']
+        self.stats = checkpoint['Stats']
 
         # The following loops are used to fix a bug that was
         # discussed here: https://github.com/pytorch/pytorch/issues/2830
@@ -154,8 +157,12 @@ class AdaptiveExperiment(object):
             if epoch % len_train_source == 0:
                 if (epoch - len_train_source >= 0):
                     epoch_loss = self.history[(epoch - len_train_source):epoch]
-                    t_l = [e for e in epoch_loss]
-                    print("**** Parent epoch now ***** ", sum(t_l) / len(t_l))
+                    training_losses = [e for e in epoch_loss]
+                    training_loss = sum(training_losses) / len(training_losses)
+                    val_loss, tar_loss = self.evaluate()
+                    print("**** Parent epoch now ***** ", training_loss, val_loss, tar_loss)
+                    stats = {'training_loss': training_loss, 'val_loss': val_loss, 'tar_loss': tar_loss}
+                    self.stats.append(stats)
 
                 iter_source = iter(self.train_loader)
             if epoch % len_train_target == 0:
@@ -207,11 +214,8 @@ class AdaptiveExperiment(object):
                 self.stats_manager.accumulate(loss.item(), None, None,
                                               None)  # x,outputs, t are not used by stats manager
 
-            if not self.perform_validation_during_training:
-                self.history.append(self.stats_manager.summarize())
-            else:
-                self.history.append(
-                    (self.stats_manager.summarize(), self.evaluate()))
+            self.history.append(self.stats_manager.summarize())
+
             print("Epoch {} (Time: {:.2f}s)".format(
                 self.epoch, time.time() - s))
             self.save()
@@ -220,35 +224,33 @@ class AdaptiveExperiment(object):
         print("Finish training for {} epochs".format(num_epochs))
 
     def evaluate(self):
-        self.stats_manager.init()
         self.net.eval()
         val_loss = 0
         tar_loss = 0
+        self.net.eval()
         with torch.no_grad():
             for x, d in self.val_loader:
                 x, d = x.to(self.net.device), d.to(self.net.device)
                 f, y = self.net.forward_adaptive(x)
                 loss = self.net.criterion(y, d)
                 val_loss += loss
-                self.stats_manager.accumulate(loss.item(), x, y, d)
 
-        #         with torch.no_grad():
-        #             for x, d in self.target_loader:
-        #                 x, d = x.to(self.net.device), d.to(self.net.device)
-        #                 d = d.view([len(d), 1])
-        #                 f, y = self.net.forward(x)
-        #                 loss = self.net.criterion(y, d)
-        #                 tar_loss += loss
-        #                 # self.stats_manager.accumulate(loss.item(), x, y, d)
+        val_loss = val_loss / len(self.val_loader)
+
+        with torch.no_grad():
+            for x, d in self.target_loader:
+                x, d = x.to(self.net.device), d.to(self.net.device)
+                d = d.view([len(d), 1])
+                f, y = self.net.forward(x)
+                loss = self.net.criterion(y, d)
+                tar_loss += loss
+
+        tar_loss = tar_loss / len(self.target_loader)
 
         self.net.train()
-        output = self.stats_manager.summarize()
 
-        if output <= self.best_loss:
-            self.best_loss = output
-            torch.save(self.net, self.output_dir + "/best-model.pt")
         print('Epoch: {}', self.epoch)
-        # print('VAL_rgre_loss: {}'.format(val_loss / len(self.val_loader)))
-        # print('TAR_rgre_loss: {}'.format(tar_loss/len(self.target_loader)))
+        print('VAL_rgre_loss: {}'.format(val_loss / len(self.val_loader)))
+        print('TAR_rgre_loss: {}'.format(tar_loss / len(self.target_loader)))
 
-        return output
+        return val_loss, tar_loss

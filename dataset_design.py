@@ -17,9 +17,6 @@ class DatasetDesign():
         source_img_files = [f for f in listdir(source_dataset_path) if isfile(join(source_dataset_path, f))]
         target_img_files = [f for f in listdir(target_dataset_path) if isfile(join(target_dataset_path, f))]
 
-        source_img_files = source_img_files[:20]
-        target_img_files = target_img_files[:20]
-
         random.seed(2)
         random.shuffle(source_img_files)
         random.shuffle(target_img_files)
