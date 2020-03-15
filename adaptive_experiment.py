@@ -241,7 +241,7 @@ class AdaptiveExperiment(object):
             for x, d in self.target_loader:
                 x, d = x.to(self.net.device), d.to(self.net.device)
                 d = d.view([len(d), 1])
-                f, y = self.net.forward(x)
+                f, y = self.net.forward_adaptive(x)
                 loss = self.net.criterion(y, d)
                 tar_loss += loss
 
