@@ -41,7 +41,7 @@ ETHNICITIES = {
     "target": 1,
 }
 
-DATASET_ROOT_DIRECTORY = "./data/utk/"
+DATASET_ROOT_DIRECTORY = "/Users/savyasachi/utk/"
 
 SOURCE_TRAIN_PATH = DATASET_ROOT_DIRECTORY + "source_train.csv"
 SOURCE_VAL_PATH = DATASET_ROOT_DIRECTORY + "source_validation.csv"
