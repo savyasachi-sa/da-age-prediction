@@ -107,7 +107,7 @@ class FinalResnet(NeuralNetwork):
             rank_l = self.rank_loss(y[:, 1], d[:, 1])
             loss = 0.7 * reg_l + 0.3 * rank_l
         else:
-            reg_l = self.reg_loss(y, d)
+            reg_l = self.reg_loss(y.squeeze(), d.squeeze())
             loss = reg_l
 
         return loss
