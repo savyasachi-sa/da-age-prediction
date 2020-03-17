@@ -1,12 +1,11 @@
 import os
-
+import pandas as pd
 import torch
 import matplotlib.pyplot as plt
 import numpy as np
 from config import *  # USE Config only for datasets
 from dataset_factory import *
 import torch.utils.data as td
-
 from final_resnet import FinalResnet
 from stats_manager import *
 
@@ -16,7 +15,8 @@ def plot_save(output_dir, epochs, plot_name, x_name, y_s={}):
     plt.xlabel(x_name)
     x = [i + 1 for i in range(epochs)]
     for key in y_s:
-        plt.plot(x, y_s[key], label = key)
+        yplot = [metric['loss'] for metric in y_s[key]]
+        plt.plot(x, yplot, label=key)
     plt.legend()
     plots_path = os.path.join(output_dir, "")
 
@@ -33,7 +33,7 @@ class GenStatsManager(object):
     def __repr__(self):
         return self.__class__.__name__
 
-    def init(self, file_path, metrics_names=[], win_thresh=3):
+    def init(self, file_path, metrics_names=[], win_thresh=WINDOW_THRESH):
         self.number_update = 0
         self.win_thresh = win_thresh
         self.metrics = dict()
@@ -69,15 +69,12 @@ class GenStatsManager(object):
 
 class ExperimentStatistics():
 
-    def __init__(self, network, output_dir, checkpoint_path, is_adaptive=False):
-        self.checkpoint = torch.load(checkpoint_path, None)
+    def __init__(self, network, output_dir, checkpoint_path, is_adaptive=ADAPTIVE, batch_size = ROOT_CONFIG['batch_size']):
+        self.checkpoint = torch.load(checkpoint_path, map_location=torch.device('cpu'))
         self.output_dir = output_dir
-        self.batch_size = 16  # TODO: any would work?
+        self.batch_size = batch_size
         self.is_adaptive = is_adaptive
         self.network = network
-        self.train_losses = []
-        self.val_losses = []  # only one value if no val values were stored
-        self.target_loss = []  # will not be calculate for each iterations
         self.stats_manager = GenStatsManager()
 
     def optimizer_stats(self):
@@ -105,47 +102,48 @@ class ExperimentStatistics():
             except BaseException as e:
                 print('An exception occurred while ready parent epoch losses: {}'.format(e))
 
-    def network_predictions(self, metric_names=['loss']):
+    def network_performance(self, metric_names=['loss'], calc_train=False):
         self.get_data_loader()
         self.network.load_state_dict(self.checkpoint['Net'])
         self.network.eval()
         with torch.no_grad():
-            self.stats_manager.init('{}train_model_stats.txt'.format(self.output_dir), metric_names)
-            for x, d in self.train_loader:
-                x, d = x.to(self.network.device), d.to(self.network.device)
-                d = d.view([len(d), 1])
-                y = self.network.forward(x)
-                loss = self.network.criterion(y, d)
-                self.stats_manager.calc_store(loss, x, y, d)
-                self.stats_manager.summarize()
+            if (calc_train):
+                self.stats_manager.init('{}train_pred_stats.txt'.format(self.output_dir), metric_names)
+                for x, d in self.train_loader:
+                    x, d = x.to(self.network.device), d.to(self.network.device)
+                    d = d.view([len(d), 1])
+                    y = self.network.forward(x)
+                    loss = self.network.criterion(y, d)
+                    self.stats_manager.calc_store(loss.item(), x, y, d)
+                    self.stats_manager.summarize()
 
-            self.stats_manager.init('{}val_model_stats.txt'.format(self.output_dir), metric_names)
+            self.stats_manager.init('{}val_pred_stats.txt'.format(self.output_dir), metric_names)
             for x, d in self.val_loader:
                 x, d = x.to(self.network.device), d.to(self.network.device)
                 d = d.view([len(d), 1])
                 y = self.network.forward(x)
                 loss = self.network.criterion(y, d)
-                self.stats_manager.calc_store(loss, x, y, d)
+                self.stats_manager.calc_store(loss.item(), x, y, d)
                 self.stats_manager.summarize()
 
-            self.stats_manager.init('{}target_model_stats.txt'.format(self.output_dir), metric_names)
             if (self.is_adaptive):
+                self.stats_manager.init('{}target_pred_stats.txt'.format(self.output_dir), metric_names)
                 for x, d in self.target_loader:
                     x, d = x.to(self.network.device), d.to(self.network.device)
                     d = d.view([len(d), 1])
                     y = self.network.forward(x)
                     loss = self.network.criterion(y, d)
-                    self.stats_manager.calc_store(loss, x, y, d)
+                    self.stats_manager.calc_store(loss.item(), x, y, d)
                     self.stats_manager.summarize()
 
     def iteration_stats(self):
         history = self.checkpoint['History']
         losses = {}
-        if (history == None or len(history) == 0):  # TODO: throw error
-            return
+        if (history == None or len(history) == 0):
+            raise Exception('No iteration history found')
         if (isinstance(history[0], tuple)):  # checks if has validation scores
-            losses['train_losses'] = np.array(history)[:, 0]  # TODO: check history if np array
-            losses['val_losses'] = np.array(history)[:, 1]  # TODO: in text file?
+            losses['train_losses'] = np.array(history)[:, 0]
+            losses['val_losses'] = np.array(history)[:, 1]
             plot_save(self.output_dir, len(history), 'iteration_losses', 'iteration', losses)
         else:
             losses['train_losses'] = np.array(history)
@@ -158,17 +156,33 @@ class ExperimentStatistics():
                                           pin_memory=True)
         self.val_loader = td.DataLoader(val_set, batch_size=self.batch_size, shuffle=False,
                                         pin_memory=True)
-        self.target_loader = td.DataLoader(target_set, batch_size=self.batch_size, shuffle=True,
+        self.target_loader = td.DataLoader(target_set, batch_size=self.batch_size, shuffle=False,
                                            pin_memory=True)
 
 
-
-
-
 # Test
-# net = FinalResnet()
-# exp = ExperimentStatistics(net, './results/', './models/astuti_test1_Adaptive_L1/checkpoint.pth.tar', is_adaptive=True)
-# exp.optimizer_stats()
-# exp.parent_epoch_losses()
-#exp.iteration_stats()
-#exp.network_predictions()
+# TODO: output director acc to each model
+# TODO: dataset acc to each model
+
+if __name__ == "__main__":
+    net = FinalResnet()
+    exp = ExperimentStatistics(net, STATS_OUTPUT_DIR, CHECKPOINT_PATH, is_adaptive=ADAPTIVE)
+    try:
+        exp.optimizer_stats()
+    except:
+        print('Error in saving OPTIMIZER stats for {}'.format(CHECKPOINT_PATH))
+
+    try:
+        exp.parent_epoch_losses()
+    except:
+        print('Error saving PARENT EPOCH statistics for {}'.format(CHECKPOINT_PATH))
+
+    try:
+        exp.iteration_stats()
+    except:
+        print('Error saving ITERATION statistics for {}'.format(CHECKPOINT_PATH))
+
+    try:
+        exp.network_performance(metric_names=['loss'], calc_train=False)
+    except:
+        print('Error saving NETWORK PERFORMANCE statistics for {}'.format(CHECKPOINT_PATH))
