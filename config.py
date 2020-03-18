@@ -2,10 +2,10 @@ import torch
 
 # ************ Experiment Statitstics Settings ***********
 # ******************************************************** # ********************************************************
-PAIRWISE = False
+PAIRWISE = True
 RANK = False
 ADAPTIVE = True
-EXPERIMENT_NAME = 'Test'
+
 LOSS = "L1"
 
 # Model Settings
@@ -13,7 +13,7 @@ REGRESSOR_CONF = {
     'fine_tune'           : True,
     'feature_sizes'       : [2048, 1024, 256, 128, 1],  # 0th - conv, then fcs, last is '1' by default.
     'adaptive_layers_conf': {
-        'n_fc': [1,2,3],  # 1 == first fc layer to adapt
+        'n_fc': [1],  # 1 == first fc layer to adapt
         'conv': False  # adapt conv layer (before first fc)
     }
 }
@@ -35,19 +35,19 @@ ETHNICITIES = {
     "target": 1,
 }
 
-## Stats Evaluation Settings
-STATS_OUTPUT_DIR =  './results/'
-STATS_MODEL_NAME = 'baseline_L1'
-
+STATS_OUTPUT_DIR =  './results/adaptive'
+CHECKPOINT_PATH = './models/baseline_L1/checkpoint.pth.tar'
 # ************ Experiment Statitstics Settings End ***********
 # ********************************************************# ********************************************************
 
+# Experiment Settings
+EXPERIMENT_NAME = 'apoorva_test12'
 
 ROOT_CONFIG = {
     'learning_rate': 1e-3,
-    'batch_size'   : 2,
+    'batch_size'   : 4,
     'num_workers'  : 16,
-    'num_epochs'   : 100,
+    'num_epochs'   : 2500,
     'cdan_hypara'  : 1.0
 }
 
@@ -56,3 +56,16 @@ ADV_CONF = {
 }
 
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+
+#LABEL NORMALIZATION ON DATASET
+LABEL_NORM = False
+
+#SMOOTHING LOSS FOR REGRESSION DA
+SIGMA2 = 1e5
+
+MMD_FLAG = True
+SMOOTH_FLAG = True
+
+#IDENTITY CONSTRAINT BASED LOSS
+IDENTITY_FLAG = True

@@ -2,7 +2,7 @@ import torch.nn as nn
 import torchvision.models as models
 from nntools import NeuralNetwork
 from config import *
-
+from mmd import *
 
 def init_weights(m):
     if isinstance(m, nn.Linear):
@@ -21,6 +21,8 @@ class FinalResnet(NeuralNetwork):
         self.rank = RANK
         self.pairwise = PAIRWISE
         self.reg_loss_type = LOSS
+        self.mmd_flag = MMD_FLAG
+        self.smooth_flag = SMOOTH_FLAG
         self.resnet = models.resnet50(pretrained=True)
         self.resnet = nn.Sequential(*[i for i in self.resnet.children()][:-1])
 
@@ -32,6 +34,7 @@ class FinalResnet(NeuralNetwork):
                 self.resnet_list.append(j)
 
             self.resnet = nn.Sequential(*[i for i in self.resnet_list])
+            
 
         linear_out = nn.Linear(self.fs[3], 1, bias=True)
         if self.rank:
@@ -39,7 +42,10 @@ class FinalResnet(NeuralNetwork):
             linear_out = nn.Linear(self.fs[3], 2, bias=True)
             self.rank_loss = nn.BCELoss()
             self.sig = nn.Sigmoid()
-
+            
+        if self.mmd_flag:
+            self.mmd_loss = MMD_loss()
+            
         if self.reg_loss_type == 'L1':
             self.reg_loss = nn.SmoothL1Loss()
         elif self.reg_loss_type == 'L2':
@@ -110,4 +116,25 @@ class FinalResnet(NeuralNetwork):
             reg_l = self.reg_loss(y.squeeze(), d.squeeze())
             loss = reg_l
 
+        return loss
+    
+    def smoothing_criterion(self, x, y):
+        #can be both entropy minimization(for ranking as classification, or smoothing in case of the regression
+        #regression case: graph laplacian:
+        #compute the gaussian kernel of the inputs
+        #splitting the batch into two (for want of a better way to get xi and xj's and yi and yj's
+        x_s = x['source']
+        x_t = x['target']
+        y_s = y['source']
+        y_t = y['target']
+        g = torch.exp(-1 * torch.sum((x_s - x_t) ** 2, dim =[1]) / (2 * SIGMA2)) #sum along all axes except batch wala
+        if self.rank:    
+            loss = 0.5 * torch.sum(g * (y_s[:,0] - y_t[:,0]) ** 2)
+        else:
+            loss = 0.5 * torch.sum(g * (y_s.squeeze() - y_t.squeeze()) ** 2) 
+        print('Smoothing Loss = ', loss.item())
+        return loss
+    def mmd_criterion(self,features):
+        loss = self.mmd_loss.forward(features['source'], features['target'])
+        print('MMD Loss = ', loss.item())
         return loss

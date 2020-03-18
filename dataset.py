@@ -4,7 +4,9 @@ import pandas as pd
 import torchvision.transforms as transforms
 import torch
 import random
-from config import RANK
+
+import numpy as np
+from config import RANK, LABEL_NORM
 
 
 class UTK(Dataset):
@@ -20,10 +22,16 @@ class UTK(Dataset):
             transforms.RandomHorizontalFlip()
             # transforms.RandomVerticalFlip()
         ])
+        self.norm_factpr = 1
+        if LABEL_NORM:
+            self.norm_factor = np.max(self.data['labels']) - np.min(self.data['labels'])
 
     def __len__(self):
         return len(self.data)
-
+    
+    def getNormFactor():
+        return self.norm_factor
+        
     def _get_item(self, idx):
         img_name = self.data.iloc[idx, 0]
         img_full = Image.open(img_name).convert('RGB')
@@ -35,8 +43,8 @@ class UTK(Dataset):
         img_full = self.normalize(img_full)
 
         label_age = torch.tensor(label_age).type(torch.FloatTensor)
-
-        return img_full, label_age
+        
+        return img_full, label_age * 1./ self.norm_factor
 
     def __getitem__(self, idx):
         return self._get_item(idx)
@@ -46,6 +54,10 @@ class PairwiseUTK(UTK):
     def __init__(self, csv_file, random_flips=True):
         super().__init__(csv_file, random_flips)
         random.seed(2)
+        self.norm_factor = 1
+        if LABEL_NORM:
+            self.norm_factor = np.max(self.data['labels']) - np.min(self.data['labels'])
+
 
     def __getitem__(self, idx):
         img1, label1 = self._get_item(idx)
@@ -56,6 +68,8 @@ class PairwiseUTK(UTK):
             rank = 0
             if label1 - label2 > 0:
                 rank = 1
-            return torch.cat((img1, img2), 0), torch.Tensor((label1 - label2, rank))
-
-        return torch.cat((img1, img2), 0), label1 - label2
+            return torch.cat((img1, img2), 0), torch.Tensor(((label1 - label2) / self.norm_factor, rank))
+        return img1, img2, (label1 - label2) * 1./ self.norm_factor
+    def getNormFactor():
+        return self.norm_factor
+        

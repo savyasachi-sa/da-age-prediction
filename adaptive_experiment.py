@@ -1,5 +1,8 @@
 from dataset_factory import get_datasets
 from cdan import *
+
+from config import *
+
 import os
 import time
 import torch
@@ -168,15 +171,21 @@ class AdaptiveExperiment(object):
             if epoch % len_train_target == 0:
                 iter_target = iter(self.target_loader)
 
-            x_source, t_source = iter_source.next()
-            x_target, t_target = iter_target.next()
-
+            x1_s, x2_s, t_source = iter_source.next()
+            x1_t, x2_t, t_target = iter_target.next()
+            
+            x_source = torch.cat([x1_s,x2_s], dim = 1)
+            x_target = torch.cat([x1_t,x2_t], dim = 1)
+            
             x_source, t_source = x_source.to(self.net.device), t_source.to(self.net.device)
             x_target, t_target = x_target.to(self.net.device), t_target.to(self.net.device)
-
+            
+            x1_s, x2_s, t_source = x1_s.to(self.net.device),x2_s.to(self.net.device), t_source.to(self.net.device)
+#             x1_t, x2_t, t_target = x1_t.to(self.net.device), x2_t.to(self.net.device), t_target.to(self.net.device)
+            
             t_source = t_source.unsqueeze(1)
             t_target = t_target.unsqueeze(1)
-
+            
             x = {
                 'source': x_source,
                 'target': x_target
@@ -186,7 +195,7 @@ class AdaptiveExperiment(object):
                 'source': t_source,
                 'target': t_target
             }
-
+            
             self.optimizer.zero_grad()
             self.adv_optimizer.zero_grad()
             features_source, outputs_source = self.net.forward_adaptive(x['source'])
@@ -203,8 +212,48 @@ class AdaptiveExperiment(object):
             }
 
             cdan_loss = CDAN(features, self.adv_net, self.epoch)
+            mmd_loss = 0
+            smooth_loss = 0
+            id_loss = 0
+            
+            if MMD_FLAG:
+                mmd_loss = self.net.mmd_criterion(features)
+                
+            if SMOOTH_FLAG:
+                smooth_loss = self.net.smoothing_criterion(features, outputs)
+                
+            if IDENTITY_FLAG:
+                d_switch = []
+                d_same = []
+                if not RANK: #only regression
+                    d_switch = -1 * t_source
+                    d_same = torch.zeros(t_source.shape)
+                    
+                
+                else: #both rank and regression
+                    d_switch = -1 * t_source
+                    d_switch[:,1] = 1 + t_source[:,1] # i.e d_rev = 0 if d = -1 and d_rev = 1 if d = 0
+                    d_same = torch.zeros(t_source.shape)
+                    d_same[:,1] = 0.5 #same person so max entropy encouraged
+                    
+                d_switch = d_switch.to(self.net.device)
+                d_same = d_same.to(self.net.device)
+                
+                self.optimizer.zero_grad()
+                y = self.net.forward(torch.cat((x1_s, x2_s), 1))
+                id_loss = self.net.criterion(y, t_source)
+
+                y = self.net.forward(torch.cat((x1_s, x1_s), 1))
+                id_loss += self.net.criterion(y, d_same)
+
+                y = self.net.forward(torch.cat((x2_s, x2_s), 1))
+                id_loss += self.net.criterion(y, d_same)
+
+                y = self.net.forward(torch.cat((x2_s, x1_s), 1))
+                id_loss += self.net.criterion(y, d_switch)
+
             loss = self.net.criterion(outputs['source'], t['source'])
-            total_loss = loss + cdan_loss * self.config['cdan_hypara']
+            total_loss = loss + cdan_loss * self.config['cdan_hypara'] + mmd_loss + smooth_loss + id_loss
             total_loss.backward()
             self.optimizer.step()
             self.adv_optimizer.step()
