@@ -22,14 +22,14 @@ class UTK(Dataset):
             transforms.RandomHorizontalFlip()
             # transforms.RandomVerticalFlip()
         ])
-        self.norm_factpr = 1
+        self.norm_factor = 1
         if LABEL_NORM:
             self.norm_factor = np.max(self.data['labels']) - np.min(self.data['labels'])
 
     def __len__(self):
         return len(self.data)
     
-    def getNormFactor():
+    def getNormFactor(self):
         return self.norm_factor
         
     def _get_item(self, idx):
@@ -70,6 +70,7 @@ class PairwiseUTK(UTK):
                 rank = 1
             return torch.cat((img1, img2), 0), torch.Tensor(((label1 - label2) / self.norm_factor, rank))
         return img1, img2, (label1 - label2) * 1./ self.norm_factor
-    def getNormFactor():
+
+    def getNormFactor(self):
         return self.norm_factor
         
