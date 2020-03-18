@@ -2,6 +2,7 @@
 data/
 models/
 results/
+logs/
 
 # Editors
 .vscode/
