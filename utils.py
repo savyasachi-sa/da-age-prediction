@@ -1,4 +1,5 @@
 from torch import nn
+import os
 
 
 def get_experiment_name(name, pairwise, ranking, adaptive, loss):
@@ -17,6 +18,9 @@ def get_experiment_name(name, pairwise, ranking, adaptive, loss):
 
     return out
 
+def get_checkpoint_path(model_dir):
+    return './models/' + model_dir + '/checkpoint.pth.tar'
+    
 
 def init_weights(m):
     classname = m.__class__.__name__

@@ -8,14 +8,15 @@ from dataset_factory import *
 import torch.utils.data as td
 from final_resnet import FinalResnet
 from stats_manager import *
+from utils import get_checkpoint_path
 
 
 def plot_save(output_dir, epochs, plot_name, x_name, y_s={}):
     plt.clf()
     plt.xlabel(x_name)
     x = [i + 1 for i in range(epochs)]
-    for key in y_s:
-        yplot = [metric['loss'] for metric in y_s[key]]
+    for key in y_s.keys():
+        yplot = y_s[key]
         plt.plot(x, yplot, label=key)
     plt.legend()
     plots_path = os.path.join(output_dir, "")
@@ -69,11 +70,11 @@ class GenStatsManager(object):
 
 class ExperimentStatistics():
 
-    def __init__(self, network, output_dir, checkpoint_path, is_adaptive=ADAPTIVE, batch_size = ROOT_CONFIG['batch_size']):
-        self.checkpoint = torch.load(checkpoint_path, map_location=torch.device('cpu'))
+    def __init__(self, network, output_dir, checkpoint_path, is_adaptive=ADAPTIVE):
+        self.checkpoint = torch.load(checkpoint_path, map_location=DEVICE)
         self.output_dir = output_dir
-        self.batch_size = batch_size
-        self.is_adaptive = is_adaptive
+        self.batch_size = ROOT_CONFIG['batch_size']
+        self.is_adaptive = 'Stats' in self.checkpoint
         self.network = network
         self.stats_manager = GenStatsManager()
 
@@ -86,7 +87,8 @@ class ExperimentStatistics():
             weight_decay = pg['weight_decay']
             stats.append("param_group: {}, lr: {}, betas: {}, weight_decay: {}".format(id, lr, betas, weight_decay))
 
-        with open('./optimizer_stats.txt', 'w') as f:
+        optimizer_stats_path = os.path.join(self.output_dir, 'optimizer_stats.txt')
+        with open(optimizer_stats_path, 'w') as f:
             for content in stats:
                 f.write(str(content) + '\n')
 
@@ -94,10 +96,16 @@ class ExperimentStatistics():
         if (self.is_adaptive):
             try:
                 parent_stats = self.checkpoint['Stats']
-                all_stats = {}
-                all_stats['train'] = np.array(parent_stats)[:, 0]
-                all_stats['val'] = np.array(parent_stats)[:, 1]
-                all_stats['target'] = np.array(parent_stats)[:, 2]
+                all_stats = {
+                    'train': [],
+                    'val': [],
+                    'target': []
+                }
+                for stat in parent_stats:
+                    all_stats['train'].append(stat['training_loss'])
+                    all_stats['val'].append(stat['val_loss'].item())
+                    all_stats['target'].append(stat['tar_loss'].item())
+                    
                 plot_save(self.output_dir, len(parent_stats), 'all_parent_stats', 'epochs', all_stats)
             except BaseException as e:
                 print('An exception occurred while ready parent epoch losses: {}'.format(e))
@@ -115,7 +123,7 @@ class ExperimentStatistics():
                     y = self.network.forward(x)
                     loss = self.network.criterion(y, d)
                     self.stats_manager.calc_store(loss.item(), x, y, d)
-                    self.stats_manager.summarize()
+                self.stats_manager.summarize()
 
             self.stats_manager.init('{}val_pred_stats.txt'.format(self.output_dir), metric_names)
             for x, d in self.val_loader:
@@ -124,7 +132,7 @@ class ExperimentStatistics():
                 y = self.network.forward(x)
                 loss = self.network.criterion(y, d)
                 self.stats_manager.calc_store(loss.item(), x, y, d)
-                self.stats_manager.summarize()
+            self.stats_manager.summarize()
 
             if (self.is_adaptive):
                 self.stats_manager.init('{}target_pred_stats.txt'.format(self.output_dir), metric_names)
@@ -134,7 +142,7 @@ class ExperimentStatistics():
                     y = self.network.forward(x)
                     loss = self.network.criterion(y, d)
                     self.stats_manager.calc_store(loss.item(), x, y, d)
-                    self.stats_manager.summarize()
+                self.stats_manager.summarize()
 
     def iteration_stats(self):
         history = self.checkpoint['History']
@@ -143,14 +151,18 @@ class ExperimentStatistics():
             raise Exception('No iteration history found')
         if (isinstance(history[0], tuple)):  # checks if has validation scores
             losses['train_losses'] = np.array(history)[:, 0]
+            losses['train_losses'] = [l['loss'] for l in losses['train_losses']]
             losses['val_losses'] = np.array(history)[:, 1]
+            losses['val_losses'] = [l['loss'] for l in losses['val_losses']]
+                                      
             plot_save(self.output_dir, len(history), 'iteration_losses', 'iteration', losses)
         else:
             losses['train_losses'] = np.array(history)
+            losses['train_losses'] = [l['loss'] for l in losses['train_losses']]
             plot_save(self.output_dir, len(history), 'iteration_losses_only_train', 'iteration', losses)
 
     def get_data_loader(self):
-        # TODO: get val and target data loader
+
         train_set, val_set, target_set = get_datasets()
         self.train_loader = td.DataLoader(train_set, batch_size=self.batch_size, shuffle=False,
                                           pin_memory=True)
@@ -165,24 +177,34 @@ class ExperimentStatistics():
 # TODO: dataset acc to each model
 
 if __name__ == "__main__":
+    
+    MODEL_NAME = 'baseline_L1'
+    
+    checkpoint_path = get_checkpoint_path(MODEL_NAME)
+    output_dir = os.path.join(STATS_OUTPUT_DIR,MODEL_NAME)
+    
+    os.makedirs(output_dir, exist_ok=True)
+    
+    
     net = FinalResnet()
-    exp = ExperimentStatistics(net, STATS_OUTPUT_DIR, CHECKPOINT_PATH, is_adaptive=ADAPTIVE)
+    net = net.to(DEVICE)
+    exp = ExperimentStatistics(net, output_dir, checkpoint_path, is_adaptive=ADAPTIVE)
     try:
         exp.optimizer_stats()
-    except:
-        print('Error in saving OPTIMIZER stats for {}'.format(CHECKPOINT_PATH))
+    except BaseException as e:
+        print('Error in saving OPTIMIZER stats for {}: {}'.format(checkpoint_path, e))
 
     try:
         exp.parent_epoch_losses()
-    except:
-        print('Error saving PARENT EPOCH statistics for {}'.format(CHECKPOINT_PATH))
+    except BaseException as e:
+        print('Error saving PARENT EPOCH statistics for {}: {}'.format(checkpoint_path, e))
 
     try:
         exp.iteration_stats()
-    except:
-        print('Error saving ITERATION statistics for {}'.format(CHECKPOINT_PATH))
+    except BaseException as e:
+        print('Error saving ITERATION statistics for {}: {}'.format(checkpoint_path, e))
 
     try:
         exp.network_performance(metric_names=['loss'], calc_train=False)
-    except:
-        print('Error saving NETWORK PERFORMANCE statistics for {}'.format(CHECKPOINT_PATH))
+    except BaseException as e:
+        print('Error saving NETWORK PERFORMANCE statistics for {}: {}'.format(checkpoint_path, e))

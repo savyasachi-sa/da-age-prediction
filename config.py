@@ -4,20 +4,30 @@ import torch
 # ******************************************************** # ********************************************************
 PAIRWISE = False
 RANK = False
-ADAPTIVE = False
+ADAPTIVE = True
+EXPERIMENT_NAME = 'adaptive_FC123'
 LOSS = "L1"
+
+ROOT_CONFIG = {
+    'learning_rate': 1e-3,
+    'batch_size': 16,
+    'num_workers': 16,
+    'num_epochs': 25000,
+    'cdan_hypara': 1.0
+}
 
 # Model Settings
 REGRESSOR_CONF = {
     'fine_tune'           : True,
     'feature_sizes'       : [2048, 1024, 256, 128, 1],  # 0th - conv, then fcs, last is '1' by default.
     'adaptive_layers_conf': {
-        'n_fc': [1],  # 1 == first fc layer to adapt
+        'n_fc': [1,2,3],  # 1 == first fc layer to adapt
         'conv': False  # adapt conv layer (before first fc)
     }
 }
 
 DATASET_ROOT_DIRECTORY = "./data/utk/"
+#DATASET_ROOT_DIRECTORY = "../../da-age-prediction/data/utk/"
 
 SOURCE_TRAIN_PATH = DATASET_ROOT_DIRECTORY + "source_train.csv"
 SOURCE_VAL_PATH = DATASET_ROOT_DIRECTORY + "source_validation.csv"
@@ -34,19 +44,17 @@ ETHNICITIES = {
     "target": 1,
 }
 
-STATS_OUTPUT_DIR =  './results/adaptive'
-CHECKPOINT_PATH = '/Users/vulcan/Downloads/savyas-models/models/baseline_L1/checkpoint.pth.tar'
+STATS_OUTPUT_DIR =  './results/'
+
 # ************ Experiment Statitstics Settings End ***********
 # ********************************************************# ********************************************************
 
-# Experiment Settings
-EXPERIMENT_NAME = 'astuti_test1'
 
 ROOT_CONFIG = {
     'learning_rate': 1e-3,
     'batch_size'   : 2,
     'num_workers'  : 16,
-    'num_epochs'   : 10,
+    'num_epochs'   : 25000,
     'cdan_hypara'  : 1.0
 }
 
