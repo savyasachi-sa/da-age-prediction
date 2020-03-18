@@ -116,7 +116,7 @@ class ExperimentStatistics():
         self.network.eval()
         with torch.no_grad():
             if (calc_train):
-                self.stats_manager.init('{}train_pred_stats.txt'.format(self.output_dir), metric_names)
+                self.stats_manager.init('{}/train_pred_stats.txt'.format(self.output_dir), metric_names)
                 for x, d in self.train_loader:
                     x, d = x.to(self.network.device), d.to(self.network.device)
                     d = d.view([len(d), 1])
@@ -125,7 +125,7 @@ class ExperimentStatistics():
                     self.stats_manager.calc_store(loss.item(), x, y, d)
                 self.stats_manager.summarize()
 
-            self.stats_manager.init('{}val_pred_stats.txt'.format(self.output_dir), metric_names)
+            self.stats_manager.init('{}/val_pred_stats.txt'.format(self.output_dir), metric_names)
             for x, d in self.val_loader:
                 x, d = x.to(self.network.device), d.to(self.network.device)
                 d = d.view([len(d), 1])
@@ -135,7 +135,7 @@ class ExperimentStatistics():
             self.stats_manager.summarize()
 
             if (self.is_adaptive):
-                self.stats_manager.init('{}target_pred_stats.txt'.format(self.output_dir), metric_names)
+                self.stats_manager.init('{}/target_pred_stats.txt'.format(self.output_dir), metric_names)
                 for x, d in self.target_loader:
                     x, d = x.to(self.network.device), d.to(self.network.device)
                     d = d.view([len(d), 1])
