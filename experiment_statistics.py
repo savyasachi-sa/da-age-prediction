@@ -178,8 +178,8 @@ class ExperimentStatistics():
 
 def evaluate_stats(model_name):
 
-    checkpoint_path = get_checkpoint_path(MODEL_NAME)
-    output_dir = os.path.join(STATS_OUTPUT_DIR,MODEL_NAME)
+    checkpoint_path = get_checkpoint_path(model_name)
+    output_dir = os.path.join(STATS_OUTPUT_DIR,model_name)
     
     os.makedirs(output_dir, exist_ok=True)
     
