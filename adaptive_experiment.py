@@ -295,7 +295,7 @@ class AdaptiveExperiment(object):
 
             
             loss = self.net.criterion(outputs['source'], t['source'])
-            total_loss = loss + cdan_loss * self.config['cdan_hypara'] + mmd_loss * self.config['mmd_hypara'] + smooth_loss * self.config['smooth_hypara']+ id_loss * self.config['id_hypara']
+            total_loss = loss + cdan_loss * self.config['cdan_hypara'] + mmd_loss * self.config['mmd_hypara'] + smooth_loss * self.config['smooth_hypara'] + id_loss * self.config['id_hypara']
             total_loss.backward()
             self.optimizer.step()
             if ADVERSARIAL_FLAG:

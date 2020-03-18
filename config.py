@@ -8,7 +8,7 @@ ADAPTIVE = True
 LOSS = "L1"
 
 # Experiment Settings
-EXPERIMENT_NAME = 'TestNoAdv'
+EXPERIMENT_NAME = 'TestNo1'
 
 # Model Settings
 REGRESSOR_CONF = {
@@ -47,7 +47,7 @@ STATS_MODEL_NAME = 'baseline_L1'
 
 ROOT_CONFIG = {
     'learning_rate': 1e-3,
-    'batch_size': 16,
+    'batch_size': 4,
     'num_workers': 16,
     'num_epochs': 2500,
     'cdan_hypara': 1.0,
@@ -72,8 +72,8 @@ MMD_FLAG = True
 SMOOTH_FLAG = True
 
 # IDENTITY CONSTRAINT BASED LOSS
-IDENTITY_FLAG = False
+IDENTITY_FLAG = True
 
 
 #ADVERSARIAL ADAPTATION BASED LOSS:
-ADVERSARIAL_FLAG = False
+ADVERSARIAL_FLAG = True
