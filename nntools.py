@@ -11,6 +11,7 @@ import torch.utils.data as td
 from abc import ABC, abstractmethod
 from config import *
 from dataset_factory import get_datasets
+from utils import write_to_file
 
 
 class NeuralNetwork(nn.Module, ABC):
@@ -143,6 +144,7 @@ class Experiment(object):
     def __init__(self, net, stats_manager,
                  output_dir=None, perform_validation_during_training=False):
 
+        self.output_dir = output_dir
         batch_size = ROOT_CONFIG['batch_size']
         learning_rate = ROOT_CONFIG['learning_rate']
         num_workers = ROOT_CONFIG['num_workers']
@@ -288,6 +290,7 @@ class Experiment(object):
             print("Epoch {} (Time: {:.2f}s)".format(
                 self.epoch, time.time() - s))
             self.save()
+            write_to_file(self.output_dir + '/history.txt', self.history)
             if plot is not None:
                 plot(self)
         print("Finish training for {} epochs".format(num_epochs))

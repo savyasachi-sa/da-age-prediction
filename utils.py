@@ -1,5 +1,17 @@
 from torch import nn
-import os
+import json
+
+
+def write_to_file(path, data):
+    """
+        This method will save the passed data in the specified file
+        path: path to the file in which you wish to write the data.
+                Example - './data/users'
+        data: a python object you wish to write in the file.
+                Example - In your case, it should be a list of dictionary objects corresponding to either User or Move.
+    """
+    with open(path, 'w') as outfile:
+        json.dump(data, outfile)
 
 
 def get_experiment_name(name, pairwise, ranking, adaptive, loss):
@@ -18,9 +30,10 @@ def get_experiment_name(name, pairwise, ranking, adaptive, loss):
 
     return out
 
+
 def get_checkpoint_path(model_dir):
     return './models/' + model_dir + '/checkpoint.pth.tar'
-    
+
 
 def init_weights(m):
     classname = m.__class__.__name__

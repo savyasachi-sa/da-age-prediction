@@ -7,6 +7,7 @@ import os
 import time
 import torch
 import torch.utils.data as td
+from utils import write_to_file
 
 
 class AdaptiveExperiment(object):
@@ -25,6 +26,7 @@ class AdaptiveExperiment(object):
         optimizer = torch.optim.Adam(net.parameters(), lr=config['learning_rate'])
         optimizer_adv = torch.optim.Adam(adver_net.parameters(), lr=config['learning_rate'])
 
+        self.output_dir = output_dir
         self.config = config
         self.adv_net = adver_net
         self.adv_optimizer = optimizer_adv
@@ -166,6 +168,9 @@ class AdaptiveExperiment(object):
                     print("**** Parent epoch now ***** ", training_loss, val_loss, tar_loss)
                     stats = {'training_loss': training_loss, 'val_loss': val_loss, 'tar_loss': tar_loss}
                     self.stats.append(stats)
+                    writable_stats = [{'training': d['training_loss'], 'validation': d['val_loss'].item(),
+                                       'target': d['tar_loss'].item()} for d in self.stats]
+                    write_to_file(self.output_dir + '/stats.txt', writable_stats)
 
                 iter_source = iter(self.train_loader)
             if epoch % len_train_target == 0:
@@ -173,19 +178,19 @@ class AdaptiveExperiment(object):
 
             x1_s, x2_s, t_source = iter_source.next()
             x1_t, x2_t, t_target = iter_target.next()
-            
-            x_source = torch.cat([x1_s,x2_s], dim = 1)
-            x_target = torch.cat([x1_t,x2_t], dim = 1)
-            
+
+            x_source = torch.cat([x1_s, x2_s], dim=1)
+            x_target = torch.cat([x1_t, x2_t], dim=1)
+
             x_source, t_source = x_source.to(self.net.device), t_source.to(self.net.device)
             x_target, t_target = x_target.to(self.net.device), t_target.to(self.net.device)
-            
-            x1_s, x2_s, t_source = x1_s.to(self.net.device),x2_s.to(self.net.device), t_source.to(self.net.device)
-#             x1_t, x2_t, t_target = x1_t.to(self.net.device), x2_t.to(self.net.device), t_target.to(self.net.device)
-            
+
+            x1_s, x2_s, t_source = x1_s.to(self.net.device), x2_s.to(self.net.device), t_source.to(self.net.device)
+            #             x1_t, x2_t, t_target = x1_t.to(self.net.device), x2_t.to(self.net.device), t_target.to(self.net.device)
+
             t_source = t_source.unsqueeze(1)
             t_target = t_target.unsqueeze(1)
-            
+
             x = {
                 'source': x_source,
                 'target': x_target
@@ -195,7 +200,7 @@ class AdaptiveExperiment(object):
                 'source': t_source,
                 'target': t_target
             }
-            
+
             self.optimizer.zero_grad()
             self.adv_optimizer.zero_grad()
             features_source, outputs_source = self.net.forward_adaptive(x['source'])
@@ -215,30 +220,30 @@ class AdaptiveExperiment(object):
             mmd_loss = 0
             smooth_loss = 0
             id_loss = 0
-            
+
             if MMD_FLAG:
                 mmd_loss = self.net.mmd_criterion(features)
-                
+
             if SMOOTH_FLAG:
                 smooth_loss = self.net.smoothing_criterion(features, outputs)
-                
+
             if IDENTITY_FLAG:
                 d_switch = []
                 d_same = []
-                if not RANK: #only regression
+                if not RANK:  # only regression
                     d_switch = -1 * t_source
                     d_same = torch.zeros(t_source.shape)
-                    
-                
-                else: #both rank and regression
+
+
+                else:  # both rank and regression
                     d_switch = -1 * t_source
-                    d_switch[:,1] = 1 + t_source[:,1] # i.e d_rev = 0 if d = -1 and d_rev = 1 if d = 0
+                    d_switch[:, 1] = 1 + t_source[:, 1]  # i.e d_rev = 0 if d = -1 and d_rev = 1 if d = 0
                     d_same = torch.zeros(t_source.shape)
-                    d_same[:,1] = 0.5 #same person so max entropy encouraged
-                    
+                    d_same[:, 1] = 0.5  # same person so max entropy encouraged
+
                 d_switch = d_switch.to(self.net.device)
                 d_same = d_same.to(self.net.device)
-                
+
                 self.optimizer.zero_grad()
                 y = self.net.forward(torch.cat((x1_s, x2_s), 1))
                 id_loss = self.net.criterion(y, t_source)
