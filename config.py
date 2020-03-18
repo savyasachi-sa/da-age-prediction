@@ -5,16 +5,8 @@ import torch
 PAIRWISE = False
 RANK = False
 ADAPTIVE = True
-EXPERIMENT_NAME = 'adaptive_FC123'
+EXPERIMENT_NAME = 'Test'
 LOSS = "L1"
-
-ROOT_CONFIG = {
-    'learning_rate': 1e-3,
-    'batch_size': 16,
-    'num_workers': 16,
-    'num_epochs': 25000,
-    'cdan_hypara': 1.0
-}
 
 # Model Settings
 REGRESSOR_CONF = {
@@ -27,7 +19,6 @@ REGRESSOR_CONF = {
 }
 
 DATASET_ROOT_DIRECTORY = "./data/utk/"
-#DATASET_ROOT_DIRECTORY = "../../da-age-prediction/data/utk/"
 
 SOURCE_TRAIN_PATH = DATASET_ROOT_DIRECTORY + "source_train.csv"
 SOURCE_VAL_PATH = DATASET_ROOT_DIRECTORY + "source_validation.csv"
@@ -44,7 +35,9 @@ ETHNICITIES = {
     "target": 1,
 }
 
+## Stats Evaluation Settings
 STATS_OUTPUT_DIR =  './results/'
+STATS_MODEL_NAME = 'baseline_L1'
 
 # ************ Experiment Statitstics Settings End ***********
 # ********************************************************# ********************************************************
@@ -54,7 +47,7 @@ ROOT_CONFIG = {
     'learning_rate': 1e-3,
     'batch_size'   : 2,
     'num_workers'  : 16,
-    'num_epochs'   : 25000,
+    'num_epochs'   : 100,
     'cdan_hypara'  : 1.0
 }
 

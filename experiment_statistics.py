@@ -134,15 +134,14 @@ class ExperimentStatistics():
                 self.stats_manager.calc_store(loss.item(), x, y, d)
             self.stats_manager.summarize()
 
-            if (self.is_adaptive):
-                self.stats_manager.init('{}/target_pred_stats.txt'.format(self.output_dir), metric_names)
-                for x, d in self.target_loader:
-                    x, d = x.to(self.network.device), d.to(self.network.device)
-                    d = d.view([len(d), 1])
-                    y = self.network.forward(x)
-                    loss = self.network.criterion(y, d)
-                    self.stats_manager.calc_store(loss.item(), x, y, d)
-                self.stats_manager.summarize()
+            self.stats_manager.init('{}/target_pred_stats.txt'.format(self.output_dir), metric_names)
+            for x, d in self.target_loader:
+                x, d = x.to(self.network.device), d.to(self.network.device)
+                d = d.view([len(d), 1])
+                y = self.network.forward(x)
+                loss = self.network.criterion(y, d)
+                self.stats_manager.calc_store(loss.item(), x, y, d)
+            self.stats_manager.summarize()
 
     def iteration_stats(self):
         history = self.checkpoint['History']
@@ -158,7 +157,8 @@ class ExperimentStatistics():
             plot_save(self.output_dir, len(history), 'iteration_losses', 'iteration', losses)
         else:
             losses['train_losses'] = np.array(history)
-            losses['train_losses'] = [l['loss'] for l in losses['train_losses']]
+            if not self.is_adaptive:
+                losses['train_losses'] = [l['loss'] for l in losses['train_losses']]
             plot_save(self.output_dir, len(history), 'iteration_losses_only_train', 'iteration', losses)
 
     def get_data_loader(self):
@@ -176,15 +176,12 @@ class ExperimentStatistics():
 # TODO: output director acc to each model
 # TODO: dataset acc to each model
 
-if __name__ == "__main__":
-    
-    MODEL_NAME = 'baseline_L1'
-    
+def evaluate_stats(model_name):
+
     checkpoint_path = get_checkpoint_path(MODEL_NAME)
     output_dir = os.path.join(STATS_OUTPUT_DIR,MODEL_NAME)
     
     os.makedirs(output_dir, exist_ok=True)
-    
     
     net = FinalResnet()
     net = net.to(DEVICE)
@@ -208,3 +205,7 @@ if __name__ == "__main__":
         exp.network_performance(metric_names=['loss'], calc_train=False)
     except BaseException as e:
         print('Error saving NETWORK PERFORMANCE statistics for {}: {}'.format(checkpoint_path, e))
+
+if __name__ == "__main__":
+    evaluate_stats(STATS_MODEL_NAME)
+    
