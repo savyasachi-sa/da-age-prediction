@@ -68,7 +68,7 @@ class PairwiseUTK(UTK):
             rank = 0
             if label1 - label2 > 0:
                 rank = 1
-            return torch.cat((img1, img2), 0), torch.Tensor(((label1 - label2) / self.norm_factor, rank))
+            return img1, img2, torch.Tensor(((label1 - label2) / self.norm_factor, rank))
         return img1, img2, (label1 - label2) * 1./ self.norm_factor
 
     def getNormFactor(self):

@@ -3,12 +3,12 @@ import torch
 # ************ Experiment Statitstics Settings ***********
 # ******************************************************** # ********************************************************
 PAIRWISE = True
-RANK = False
+RANK = True
 ADAPTIVE = True
 LOSS = "L1"
 
 # Experiment Settings
-EXPERIMENT_NAME = 'Test'
+EXPERIMENT_NAME = 'TestNoAdv'
 
 # Model Settings
 REGRESSOR_CONF = {
@@ -50,7 +50,10 @@ ROOT_CONFIG = {
     'batch_size': 16,
     'num_workers': 16,
     'num_epochs': 2500,
-    'cdan_hypara': 1.0
+    'cdan_hypara': 1.0,
+    'mmd_hypara': 1.0,
+    'smooth_hypara': 1.0,
+    'id_hypara': 1.0,
 }
 
 ADV_CONF = {
@@ -69,4 +72,8 @@ MMD_FLAG = True
 SMOOTH_FLAG = True
 
 # IDENTITY CONSTRAINT BASED LOSS
-IDENTITY_FLAG = True
+IDENTITY_FLAG = False
+
+
+#ADVERSARIAL ADAPTATION BASED LOSS:
+ADVERSARIAL_FLAG = False
