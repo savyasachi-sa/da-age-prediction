@@ -118,9 +118,7 @@ class AdaptiveExperiment(object):
                     'History': self.history,
                     'Stats': self.stats}
         return {'Net': self.net.state_dict(),
-                    'AdvNet': self.adv_net.state_dict(),
                     'Optimizer': self.optimizer.state_dict(),
-                    'AdvOptimizer': self.adv_optimizer.state_dict(),
                     'History': self.history,
                     'Stats': self.stats}
 
