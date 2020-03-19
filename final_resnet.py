@@ -132,9 +132,9 @@ class FinalResnet(NeuralNetwork):
             loss = 0.5 * torch.sum(g * (y_s[:,0] - y_t[:,0]) ** 2)
         else:
             loss = 0.5 * torch.sum(g * (y_s.squeeze() - y_t.squeeze()) ** 2) 
-        print('Smoothing Loss = ', loss.item())
+#         print('Smoothing Loss = ', loss.item())
         return loss
     def mmd_criterion(self,features):
         loss = self.mmd_loss.forward(features['source'], features['target'])
-        print('MMD Loss = ', loss.item())
+#         print('MMD Loss = ', loss.item())
         return loss

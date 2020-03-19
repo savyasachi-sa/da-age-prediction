@@ -247,7 +247,7 @@ class AdaptiveExperiment(object):
             else:
                 x_source, t_source = iter_source.next()
                 x_target, t_target = iter_target.next()
-
+            
             x_source, t_source = x_source.to(self.net.device), t_source.to(self.net.device)
             x_target, t_target = x_target.to(self.net.device), t_target.to(self.net.device)
 
@@ -274,7 +274,8 @@ class AdaptiveExperiment(object):
                 'source': features_source,
                 'target': features_target
             }
-
+            
+            mmd_size = min(features['source'].shape[0],features['target'].shape[0])
             outputs = {
                 'source': outputs_source,
                 'target': outputs_target
@@ -286,7 +287,8 @@ class AdaptiveExperiment(object):
             mmd_loss = 0
             smooth_loss = 0
             if MMD_FLAG:
-                mmd_loss = self.net.mmd_criterion(features)
+                mmd_loss = self.net.mmd_criterion({'source':features['source'][:mmd_size,:],
+                                                  'target' : features['target'][:mmd_size,:]})
 
             if SMOOTH_FLAG:
                 smooth_loss = self.net.smoothing_criterion(features, outputs)
@@ -300,14 +302,15 @@ class AdaptiveExperiment(object):
                 self.adv_optimizer.step()
 
             print('Epoch: {}, TRAIN, rgre_loss: {}, total_loss: {}'.format(self.epoch, loss.item(), total_loss.item()))
+#             print('Iteration Number = ', epoch)
             with torch.no_grad():
-                self.stats_manager.accumulate(loss.item(), None, None,
+                self.stats_manager.accumulate(total_loss.item(), None, None,
                                               None)  # x,outputs, t are not used by stats manager
 
             self.history.append(self.stats_manager.summarize())
 
-            print("Epoch {} (Time: {:.2f}s)".format(
-                self.epoch, time.time() - s))
+#             print("Epoch {} (Time: {:.2f}s)".format(
+#                 self.epoch, time.time() - s))
             self.save()
             if plot is not None:
                 plot(self)
