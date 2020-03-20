@@ -291,8 +291,11 @@ class AdaptiveExperiment(object):
                                                   'target' : features['target'][:mmd_size,:]})
 
             if SMOOTH_FLAG:
-                smooth_loss = self.net.smoothing_criterion({'source':features['source'][:mmd_size,:],
-                                                  'target' : features['target'][:mmd_size,:]}, outputs)
+                smooth_loss = self.net.smoothing_criterion({'source':features_source[:mmd_size,:],
+                                                  'target' : features_target[:mmd_size,:]}, {
+                'source': outputs_source[:mmd_size],
+                'target': outputs_target[:mmd_size]
+            })
 
             
             loss = self.net.criterion(outputs['source'], t['source'])
