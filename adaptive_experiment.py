@@ -291,7 +291,8 @@ class AdaptiveExperiment(object):
                                                   'target' : features['target'][:mmd_size,:]})
 
             if SMOOTH_FLAG:
-                smooth_loss = self.net.smoothing_criterion(features, outputs)
+                smooth_loss = self.net.smoothing_criterion({'source':features['source'][:mmd_size,:],
+                                                  'target' : features['target'][:mmd_size,:]}, outputs)
 
             
             loss = self.net.criterion(outputs['source'], t['source'])
@@ -321,22 +322,42 @@ class AdaptiveExperiment(object):
         val_loss = 0
         tar_loss = 0
         self.net.eval()
+        val_iter= iter(self.val_loader)
+        x = []
         with torch.no_grad():
-            for x, d in self.val_loader:
+            for i in range(len(self.val_loader)):      
+                if PAIRWISE:
+                    x1_s, x2_s, d = val_iter.next()
+                    x = torch.cat([x1_s, x2_s], dim=1)
+                else:
+                    x, d = val_iter.next()
                 x, d = x.to(self.net.device), d.to(self.net.device)
                 f, y = self.net.forward_adaptive(x)
                 loss = self.net.criterion(y, d)
                 val_loss += loss
 
         val_loss = val_loss / len(self.val_loader)
-
+        
+        tar_iter= iter(self.target_loader)
+        x = []
         with torch.no_grad():
-            for x, d in self.target_loader:
+            for i in range(len(self.target_loader)):      
+                if PAIRWISE:
+                    x1_s, x2_s, d = tar_iter.next()
+                    x = torch.cat([x1_s, x2_s], dim=1)
+                else:
+                    x, d = tar_iter.next()
                 x, d = x.to(self.net.device), d.to(self.net.device)
-                d = d.view([len(d), 1])
                 f, y = self.net.forward_adaptive(x)
                 loss = self.net.criterion(y, d)
                 tar_loss += loss
+#         with torch.no_grad():
+#             for x, d in self.target_loader:
+#                 x, d = x.to(self.net.device), d.to(self.net.device)
+#                 d = d.view([len(d), 1])
+#                 f, y = self.net.forward_adaptive(x)
+#                 loss = self.net.criterion(y, d)
+#                 tar_loss += loss
 
         tar_loss = tar_loss / len(self.target_loader)
 
