@@ -38,9 +38,9 @@ class AdverserialNetwork(NeuralNetwork):
     def forward(self, x, iter_num):
         coefficient = self.calc_coeff(iter_num)
         reversed_x = ReverseLayerF.apply(x, coefficient)
-        return self.forward(reversed_x)
+        return self.forward_pass(reversed_x)
 
-    def forward(self, x):
+    def forward_pass(self, x):
         f = self.ad_layer1(x)
         f = self.relu1(f)
         f = self.dropout1(f)
