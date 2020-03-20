@@ -38,7 +38,10 @@ class AdverserialNetwork(NeuralNetwork):
     def forward(self, x, iter_num):
         coefficient = self.calc_coeff(iter_num)
         reversed_x = ReverseLayerF.apply(x, coefficient)
-        f = self.ad_layer1(reversed_x)
+        return self.forward(reversed_x)
+
+    def forward(self, x):
+        f = self.ad_layer1(x)
         f = self.relu1(f)
         f = self.dropout1(f)
         f = self.ad_layer2(f)
@@ -49,4 +52,4 @@ class AdverserialNetwork(NeuralNetwork):
         return y
 
     def criterion(self, y, d):
-        print("shouldn't be calling this function")
+        return nn.BCELoss(y.squeeze(), d.squeeze())

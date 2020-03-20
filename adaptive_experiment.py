@@ -10,6 +10,16 @@ import torch.utils.data as td
 from utils import write_to_file
 
 
+def get_writable_stats(d):
+    out = {'training': d['training_loss'], 'validation': d['val_loss'].item(),
+           'target': d['tar_loss'].item()}
+
+    if 'd_loss' in d:
+        out['d_loss'] = d['d_loss'].item()
+    else:
+        out['d_loss'] = 0
+
+
 class AdaptiveExperiment(object):
 
     def __init__(self, net, adver_net, stats_manager,
@@ -75,7 +85,7 @@ class AdaptiveExperiment(object):
 
     def setting(self):
         """Returns the setting of the experiment."""
-        
+
         if ADVERSARIAL_FLAG:
             return {'Net': self.net,
                     "AdvNet": self.adv_net,
@@ -86,17 +96,16 @@ class AdaptiveExperiment(object):
                     'StatsManager': self.stats_manager,
                     'BatchSize': self.batch_size,
                     'PerformValidationDuringTraining': self.perform_validation_during_training}
-        
+
         return {'Net': self.net,
-#                 "AdvNet": self.adv_net,
+                #                 "AdvNet": self.adv_net,
                 'TrainSet': self.train_dataset,
                 'ValSet': self.val_dataset,
                 'Optimizer': self.optimizer,
-#                 'AdvOptimizer': self.adv_optimizer,
+                #                 'AdvOptimizer': self.adv_optimizer,
                 'StatsManager': self.stats_manager,
                 'BatchSize': self.batch_size,
                 'PerformValidationDuringTraining': self.perform_validation_during_training}
-        
 
     def __repr__(self):
         """Pretty printer showing the setting of the experiment. This is what
@@ -118,19 +127,19 @@ class AdaptiveExperiment(object):
                     'History': self.history,
                     'Stats': self.stats}
         return {'Net': self.net.state_dict(),
-                    'Optimizer': self.optimizer.state_dict(),
-                    'History': self.history,
-                    'Stats': self.stats}
+                'Optimizer': self.optimizer.state_dict(),
+                'History': self.history,
+                'Stats': self.stats}
 
     def load_state_dict(self, checkpoint):
         """Loads the experiment from the input checkpoint."""
         self.net.load_state_dict(checkpoint['Net'])
         self.optimizer.load_state_dict(checkpoint['Optimizer'])
-        
+
         if ADVERSARIAL_FLAG:
             self.adv_net.load_state_dict(checkpoint['AdvNet'])
             self.adv_optimizer.load_state_dict(checkpoint['AdvOptimizer'])
-        
+
         self.history = checkpoint['History']
         self.stats = checkpoint['Stats']
 
@@ -186,34 +195,34 @@ class AdaptiveExperiment(object):
                     epoch_loss = self.history[(epoch - len_train_source):epoch]
                     training_losses = [e for e in epoch_loss]
                     training_loss = sum(training_losses) / len(training_losses)
-                    val_loss, tar_loss = self.evaluate()
+                    val_loss, tar_loss, discriminator_loss = self.evaluate()
                     print("**** Parent epoch now ***** ", training_loss, val_loss, tar_loss)
-                    stats = {'training_loss': training_loss, 'val_loss': val_loss, 'tar_loss': tar_loss}
+                    stats = {'training_loss': training_loss, 'val_loss': val_loss, 'tar_loss': tar_loss,
+                             'd_loss': discriminator_loss}
                     self.stats.append(stats)
-                    writable_stats = [{'training': d['training_loss'], 'validation': d['val_loss'].item(),
-                                       'target': d['tar_loss'].item()} for d in self.stats]
+                    writable_stats = [get_writable_stats(d) for d in self.stats]
                     write_to_file(self.output_dir + '/stats.txt', writable_stats)
 
                 iter_source = iter(self.train_loader)
             if epoch % len_train_target == 0:
                 iter_target = iter(self.target_loader)
-                
+
             id_loss = 0
             x_source = []
             x_target = []
             t_source = []
             t_target = []
-            
+
             if PAIRWISE:
                 x1_s, x2_s, t_source = iter_source.next()
                 x1_t, x2_t, t_target = iter_target.next()
-                
-                x1_s, x2_s, t_source = x1_s.to(self.net.device), x2_s.to(self.net.device),t_source.to(self.net.device)
+
+                x1_s, x2_s, t_source = x1_s.to(self.net.device), x2_s.to(self.net.device), t_source.to(self.net.device)
                 x1_t, x2_t, t_target = x1_t.to(self.net.device), x2_t.to(self.net.device), t_target.to(self.net.device)
-                
+
                 x_source = torch.cat([x1_s, x2_s], dim=1)
                 x_target = torch.cat([x1_t, x2_t], dim=1)
-                
+
                 if IDENTITY_FLAG:
                     d_switch = []
                     d_same = []
@@ -247,7 +256,7 @@ class AdaptiveExperiment(object):
             else:
                 x_source, t_source = iter_source.next()
                 x_target, t_target = iter_target.next()
-            
+
             x_source, t_source = x_source.to(self.net.device), t_source.to(self.net.device)
             x_target, t_target = x_target.to(self.net.device), t_target.to(self.net.device)
 
@@ -274,8 +283,8 @@ class AdaptiveExperiment(object):
                 'source': features_source,
                 'target': features_target
             }
-            
-            mmd_size = min(features['source'].shape[0],features['target'].shape[0])
+
+            mmd_size = min(features['source'].shape[0], features['target'].shape[0])
             outputs = {
                 'source': outputs_source,
                 'target': outputs_target
@@ -287,34 +296,34 @@ class AdaptiveExperiment(object):
             mmd_loss = 0
             smooth_loss = 0
             if MMD_FLAG:
-                mmd_loss = self.net.mmd_criterion({'source':features['source'][:mmd_size,:],
-                                                  'target' : features['target'][:mmd_size,:]})
+                mmd_loss = self.net.mmd_criterion({'source': features['source'][:mmd_size, :],
+                                                   'target': features['target'][:mmd_size, :]})
 
             if SMOOTH_FLAG:
-                smooth_loss = self.net.smoothing_criterion({'source':features_source[:mmd_size,:],
-                                                  'target' : features_target[:mmd_size,:]}, {
-                'source': outputs_source[:mmd_size],
-                'target': outputs_target[:mmd_size]
-            })
+                smooth_loss = self.net.smoothing_criterion({'source': features_source[:mmd_size, :],
+                                                            'target': features_target[:mmd_size, :]}, {
+                                                               'source': outputs_source[:mmd_size],
+                                                               'target': outputs_target[:mmd_size]
+                                                           })
 
-            
             loss = self.net.criterion(outputs['source'], t['source'])
-            total_loss = loss + cdan_loss * self.config['cdan_hypara'] + mmd_loss * self.config['mmd_hypara'] + smooth_loss * self.config['smooth_hypara'] + id_loss * self.config['id_hypara']
+            total_loss = loss + cdan_loss * self.config['cdan_hypara'] + mmd_loss * self.config[
+                'mmd_hypara'] + smooth_loss * self.config['smooth_hypara'] + id_loss * self.config['id_hypara']
             total_loss.backward()
             self.optimizer.step()
             if ADVERSARIAL_FLAG:
                 self.adv_optimizer.step()
 
             print('Epoch: {}, TRAIN, rgre_loss: {}, total_loss: {}'.format(self.epoch, loss.item(), total_loss.item()))
-#             print('Iteration Number = ', epoch)
+            #             print('Iteration Number = ', epoch)
             with torch.no_grad():
                 self.stats_manager.accumulate(total_loss.item(), None, None,
                                               None)  # x,outputs, t are not used by stats manager
 
             self.history.append(self.stats_manager.summarize())
 
-#             print("Epoch {} (Time: {:.2f}s)".format(
-#                 self.epoch, time.time() - s))
+            #             print("Epoch {} (Time: {:.2f}s)".format(
+            #                 self.epoch, time.time() - s))
             self.save()
             if plot is not None:
                 plot(self)
@@ -324,11 +333,13 @@ class AdaptiveExperiment(object):
         self.net.eval()
         val_loss = 0
         tar_loss = 0
+        discriminator_loss = 0
         self.net.eval()
-        val_iter= iter(self.val_loader)
+        self.adv_net.eval()
+        val_iter = iter(self.val_loader)
         x = []
         with torch.no_grad():
-            for i in range(len(self.val_loader)):      
+            for i in range(len(self.val_loader)):
                 if PAIRWISE:
                     x1_s, x2_s, d = val_iter.next()
                     x = torch.cat([x1_s, x2_s], dim=1)
@@ -338,13 +349,16 @@ class AdaptiveExperiment(object):
                 f, y = self.net.forward_adaptive(x)
                 loss = self.net.criterion(y, d)
                 val_loss += loss
+                d_out = self.adv_net(x)
+                d_loss = self.adv_net.criterion(d_out, torch.ones(x.size(0)))
+                discriminator_loss += d_loss
 
         val_loss = val_loss / len(self.val_loader)
-        
-        tar_iter= iter(self.target_loader)
+
+        tar_iter = iter(self.target_loader)
         x = []
         with torch.no_grad():
-            for i in range(len(self.target_loader)):      
+            for i in range(len(self.target_loader)):
                 if PAIRWISE:
                     x1_s, x2_s, d = tar_iter.next()
                     x = torch.cat([x1_s, x2_s], dim=1)
@@ -354,20 +368,27 @@ class AdaptiveExperiment(object):
                 f, y = self.net.forward_adaptive(x)
                 loss = self.net.criterion(y, d)
                 tar_loss += loss
-#         with torch.no_grad():
-#             for x, d in self.target_loader:
-#                 x, d = x.to(self.net.device), d.to(self.net.device)
-#                 d = d.view([len(d), 1])
-#                 f, y = self.net.forward_adaptive(x)
-#                 loss = self.net.criterion(y, d)
-#                 tar_loss += loss
+
+                d_out = self.adv_net(x)
+                d_loss = self.adv_net.criterion(d_out, torch.zeros(x.size(0)))
+                discriminator_loss += d_loss
+        #         with torch.no_grad():
+        #             for x, d in self.target_loader:
+        #                 x, d = x.to(self.net.device), d.to(self.net.device)
+        #                 d = d.view([len(d), 1])
+        #                 f, y = self.net.forward_adaptive(x)
+        #                 loss = self.net.criterion(y, d)
+        #                 tar_loss += loss
 
         tar_loss = tar_loss / len(self.target_loader)
+        discriminator_loss = discriminator_loss / (len(self.val_loader) + len(self.target_loader))
 
         self.net.train()
+        self.adv_net.train()
 
         print('Epoch: {}', self.epoch)
-        print('VAL_rgre_loss: {}'.format(val_loss / len(self.val_loader)))
-        print('TAR_rgre_loss: {}'.format(tar_loss / len(self.target_loader)))
+        print('VAL_rgre_loss: {}'.format(val_loss))
+        print('TAR_rgre_loss: {}'.format(tar_loss))
+        print('Discriminator Loss: {}'.format(discriminator_loss))
 
-        return val_loss, tar_loss
+        return val_loss, tar_loss, discriminator_loss
