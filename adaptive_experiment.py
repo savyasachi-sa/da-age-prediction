@@ -23,7 +23,7 @@ def get_writable_stats(d):
 class AdaptiveExperiment(object):
 
     def __init__(self, net, adver_net, stats_manager,
-                 output_dir=None, perform_validation_during_training=False):
+                 output_dir=None, perform_validation_during_training=False, pretrained_data=None):
 
         config = ROOT_CONFIG
         batch_size = config['batch_size']
@@ -35,6 +35,10 @@ class AdaptiveExperiment(object):
 
         optimizer = torch.optim.Adam(net.parameters(), lr=config['learning_rate'])
         optimizer_adv = torch.optim.Adam(adver_net.parameters(), lr=config['learning_rate'])
+
+        if pretrained_data is not None:
+            net.load_state_dict(pretrained_data['Net'])
+            optimizer.load_state_dict(pretrained_data['Optimizer'])
 
         self.output_dir = output_dir
         self.config = config
@@ -313,8 +317,10 @@ class AdaptiveExperiment(object):
             self.optimizer.step()
             if ADVERSARIAL_FLAG:
                 self.adv_optimizer.step()
-
-            print('Epoch: {}, TRAIN, rgre_loss: {}, total_loss: {}'.format(self.epoch, loss.item(), total_loss.item()))
+            print(
+                'Epoch: {}, (Time: {:.2f}s), TRAIN, rgre_loss: {}, total_loss: {}'.format(self.epoch, time.time() - s,
+                                                                                          loss.item(),
+                                                                                          total_loss.item()))
             #             print('Iteration Number = ', epoch)
             with torch.no_grad():
                 self.stats_manager.accumulate(total_loss.item(), None, None,
@@ -329,66 +335,67 @@ class AdaptiveExperiment(object):
                 plot(self)
         print("Finish training for {} epochs".format(num_epochs))
 
-    def evaluate(self):
-        self.net.eval()
-        val_loss = 0
-        tar_loss = 0
-        discriminator_loss = 0
-        self.net.eval()
-        self.adv_net.eval()
-        val_iter = iter(self.val_loader)
-        x = []
-        with torch.no_grad():
-            for i in range(len(self.val_loader)):
-                if PAIRWISE:
-                    x1_s, x2_s, d = val_iter.next()
-                    x = torch.cat([x1_s, x2_s], dim=1)
-                else:
-                    x, d = val_iter.next()
-                x, d = x.to(self.net.device), d.to(self.net.device)
-                f, y = self.net.forward_adaptive(x)
-                loss = self.net.criterion(y, d)
-                val_loss += loss
-                d_out = self.adv_net.forward_pass(x)
-                d_loss = self.adv_net.criterion(d_out, torch.ones(x.size(0)))
-                discriminator_loss += d_loss
 
-        val_loss = val_loss / len(self.val_loader)
+def evaluate(self):
+    self.net.eval()
+    val_loss = 0
+    tar_loss = 0
+    discriminator_loss = 0
+    self.net.eval()
+    self.adv_net.eval()
+    val_iter = iter(self.val_loader)
+    x = []
+    with torch.no_grad():
+        for i in range(len(self.val_loader)):
+            if PAIRWISE:
+                x1_s, x2_s, d = val_iter.next()
+                x = torch.cat([x1_s, x2_s], dim=1)
+            else:
+                x, d = val_iter.next()
+            x, d = x.to(self.net.device), d.to(self.net.device)
+            f, y = self.net.forward_adaptive(x)
+            loss = self.net.criterion(y, d)
+            val_loss += loss
+            d_out = self.adv_net.forward_pass(f)
+            d_loss = self.adv_net.criterion(d_out, torch.ones(x.size(0)))
+            discriminator_loss += d_loss
 
-        tar_iter = iter(self.target_loader)
-        x = []
-        with torch.no_grad():
-            for i in range(len(self.target_loader)):
-                if PAIRWISE:
-                    x1_s, x2_s, d = tar_iter.next()
-                    x = torch.cat([x1_s, x2_s], dim=1)
-                else:
-                    x, d = tar_iter.next()
-                x, d = x.to(self.net.device), d.to(self.net.device)
-                f, y = self.net.forward_adaptive(x)
-                loss = self.net.criterion(y, d)
-                tar_loss += loss
+    val_loss = val_loss / len(self.val_loader)
 
-                d_out = self.adv_net.forward_pass(x)
-                d_loss = self.adv_net.criterion(d_out, torch.zeros(x.size(0)))
-                discriminator_loss += d_loss
-        #         with torch.no_grad():
-        #             for x, d in self.target_loader:
-        #                 x, d = x.to(self.net.device), d.to(self.net.device)
-        #                 d = d.view([len(d), 1])
-        #                 f, y = self.net.forward_adaptive(x)
-        #                 loss = self.net.criterion(y, d)
-        #                 tar_loss += loss
+    tar_iter = iter(self.target_loader)
+    x = []
+    with torch.no_grad():
+        for i in range(len(self.target_loader)):
+            if PAIRWISE:
+                x1_s, x2_s, d = tar_iter.next()
+                x = torch.cat([x1_s, x2_s], dim=1)
+            else:
+                x, d = tar_iter.next()
+            x, d = x.to(self.net.device), d.to(self.net.device)
+            f, y = self.net.forward_adaptive(x)
+            loss = self.net.criterion(y, d)
+            tar_loss += loss
 
-        tar_loss = tar_loss / len(self.target_loader)
-        discriminator_loss = discriminator_loss / (len(self.val_loader) + len(self.target_loader))
+            d_out = self.adv_net.forward_pass(f)
+            d_loss = self.adv_net.criterion(d_out, torch.zeros(x.size(0)))
+            discriminator_loss += d_loss
+    #         with torch.no_grad():
+    #             for x, d in self.target_loader:
+    #                 x, d = x.to(self.net.device), d.to(self.net.device)
+    #                 d = d.view([len(d), 1])
+    #                 f, y = self.net.forward_adaptive(x)
+    #                 loss = self.net.criterion(y, d)
+    #                 tar_loss += loss
 
-        self.net.train()
-        self.adv_net.train()
+    tar_loss = tar_loss / len(self.target_loader)
+    discriminator_loss = discriminator_loss / (len(self.val_loader) + len(self.target_loader))
 
-        print('Epoch: {}', self.epoch)
-        print('VAL_rgre_loss: {}'.format(val_loss))
-        print('TAR_rgre_loss: {}'.format(tar_loss))
-        print('Discriminator Loss: {}'.format(discriminator_loss))
+    self.net.train()
+    self.adv_net.train()
 
-        return val_loss, tar_loss, discriminator_loss
+    print('Epoch: {}', self.epoch)
+    print('VAL_rgre_loss: {}'.format(val_loss))
+    print('TAR_rgre_loss: {}'.format(tar_loss))
+    print('Discriminator Loss: {}'.format(discriminator_loss))
+
+    return val_loss, tar_loss, discriminator_loss

@@ -11,6 +11,8 @@ if __name__ == "__main__":
     experiment_name = get_experiment_name(EXPERIMENT_NAME, PAIRWISE, RANK, ADAPTIVE, LOSS)
 
     if ADAPTIVE:
-        train_adaptive(experiment_name)
+        pretrained_model_name = None
+#        pretrained_model_name = 'baseline_L1'
+        train_adaptive(experiment_name, pretrained_model_name=pretrained_model_name)
     else:
         train_baseline(experiment_name)
