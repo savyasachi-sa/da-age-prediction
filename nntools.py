@@ -11,7 +11,6 @@ import torch.utils.data as td
 from abc import ABC, abstractmethod
 from config import *
 from dataset_factory import get_datasets
-from utils import write_to_file
 
 
 class NeuralNetwork(nn.Module, ABC):
@@ -273,7 +272,12 @@ class Experiment(object):
         for epoch in range(start_epoch, num_epochs):
             s = time.time()
             self.stats_manager.init()
-            for x, d in self.train_loader:
+            for sample in self.train_loader:
+                if PAIRWISE:
+                    x1, x2, d = sample
+                    x = torch.cat((x1, x2), dim=1)
+                else:
+                    x, d = sample
                 x, d = x.to(self.net.device), d.to(self.net.device)
                 self.optimizer.zero_grad()
                 y = self.net.forward(x)
@@ -290,7 +294,8 @@ class Experiment(object):
             print("Epoch {} (Time: {:.2f}s)".format(
                 self.epoch, time.time() - s))
             self.save()
-            write_to_file(self.output_dir + '/history.txt', self.history)
+            with open(self.output_dir + '/history.txt', 'w') as outfile:
+                outfile.write(str(self.history))
             if plot is not None:
                 plot(self)
         print("Finish training for {} epochs".format(num_epochs))
@@ -303,7 +308,12 @@ class Experiment(object):
         self.stats_manager.init()
         self.net.eval()
         with torch.no_grad():
-            for x, d in self.val_loader:
+            for sample in self.val_loader:
+                if PAIRWISE:
+                    x1, x2, d = sample
+                    x = torch.cat((x1, x2), dim=1)
+                else:
+                    x, d = sample
                 x, d = x.to(self.net.device), d.to(self.net.device)
                 y = self.net.forward(x)
                 loss = self.net.criterion(y, d)
