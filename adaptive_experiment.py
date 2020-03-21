@@ -356,10 +356,7 @@ class AdaptiveExperiment(object):
                 loss = self.net.criterion(y, d)
                 val_loss += loss
                 d_out = self.adv_net.forward_pass(f)
-                print(d_out)
-                print(d_out.size())
-                print(torch.ones(x.size(0)))
-                d_loss = self.adv_net.criterion(d_out, torch.ones(x.size(0)))
+                d_loss = self.adv_net.criterion(d_out, torch.ones(x.size(0)).to(DEVICE))
                 discriminator_loss += d_loss
 
         val_loss = val_loss / len(self.val_loader)
@@ -379,7 +376,7 @@ class AdaptiveExperiment(object):
                 tar_loss += loss
 
                 d_out = self.adv_net.forward_pass(f)
-                d_loss = self.adv_net.criterion(d_out, torch.zeros(x.size(0)))
+                d_loss = self.adv_net.criterion(d_out, torch.zeros(x.size(0)).to(DEVICE))
                 discriminator_loss += d_loss
         #         with torch.no_grad():
         #             for x, d in self.target_loader:
