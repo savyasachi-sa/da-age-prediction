@@ -83,7 +83,8 @@ class FinalResnet(NeuralNetwork):
     def forward_adaptive(self, x):
 
         y = self.resnet(x)
-        y = y.squeeze()
+        y = y.squeeze(-1)
+        y = y.squeeze(-1)
 
         layers_adapt = ()
 

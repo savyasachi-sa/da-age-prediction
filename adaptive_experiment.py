@@ -325,7 +325,7 @@ class AdaptiveExperiment(object):
                 'Epoch: {}, (Time: {:.2f}s), TRAIN, rgre_loss: {}, total_loss: {}, Discriminator Loss: {}'.format(
                     self.epoch, time.time() - s,
                     loss.item(),
-                    total_loss.item(), cdan_loss.item()))
+                    total_loss.item(), cdan_loss.item() if ADVERSARIAL_FLAG else cdan_loss))
             #             print('Iteration Number = ', epoch)
             with torch.no_grad():
                 self.stats_manager.accumulate(total_loss.item(), None, None,
