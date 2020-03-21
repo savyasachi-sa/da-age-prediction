@@ -48,8 +48,7 @@ class AdverserialNetwork(NeuralNetwork):
         f = self.relu2(f)
         f = self.dropout2(f)
         y = self.ad_layer3(f)
-        y = self.sigmoid(y)
         return y
 
     def criterion(self, y, d):
-        return nn.BCELoss()(y.squeeze(), d.squeeze())
+        return nn.BCEWithLogitsLoss()(y.squeeze(), d.squeeze())

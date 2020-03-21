@@ -21,6 +21,7 @@ def get_writable_stats(d):
 
     return out
 
+
 class AdaptiveExperiment(object):
 
     def __init__(self, net, adver_net, stats_manager,
@@ -35,7 +36,9 @@ class AdaptiveExperiment(object):
         adver_net = adver_net.to(DEVICE)
 
         optimizer = torch.optim.Adam(net.parameters(), lr=config['learning_rate'])
-        optimizer_adv = torch.optim.Adam(adver_net.parameters(), lr=config['learning_rate'])
+        # TODO: Load from config
+        optimizer_adv = torch.optim.SGD(adver_net.parameters(), lr=0.01, weight_decay=0.0005,
+                                        momentum=0.9)
 
         if pretrained_data is not None:
             net.load_state_dict(pretrained_data['Net'])
@@ -319,9 +322,10 @@ class AdaptiveExperiment(object):
             if ADVERSARIAL_FLAG:
                 self.adv_optimizer.step()
             print(
-                'Epoch: {}, (Time: {:.2f}s), TRAIN, rgre_loss: {}, total_loss: {}'.format(self.epoch, time.time() - s,
-                                                                                          loss.item(),
-                                                                                          total_loss.item()))
+                'Epoch: {}, (Time: {:.2f}s), TRAIN, rgre_loss: {}, total_loss: {}, Discriminator Loss: {}'.format(
+                    self.epoch, time.time() - s,
+                    loss.item(),
+                    total_loss.item(), cdan_loss.item()))
             #             print('Iteration Number = ', epoch)
             with torch.no_grad():
                 self.stats_manager.accumulate(total_loss.item(), None, None,
