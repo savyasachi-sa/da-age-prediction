@@ -52,4 +52,4 @@ class AdverserialNetwork(NeuralNetwork):
         return y
 
     def criterion(self, y, d):
-        return nn.BCELoss(y.squeeze(), d.squeeze())
+        return nn.BCELoss()(y.squeeze(), d.squeeze())
