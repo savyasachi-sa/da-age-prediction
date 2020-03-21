@@ -19,6 +19,7 @@ def get_writable_stats(d):
     else:
         out['d_loss'] = 0
 
+    return out
 
 class AdaptiveExperiment(object):
 
