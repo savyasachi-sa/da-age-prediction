@@ -2,15 +2,15 @@ import torch
 
 # ************ Training Parameters Settings ************** #
 
-PAIRWISE = True # Use Pairwise data or not
-RANK = True # Ranking Loss enabled or not
+PAIRWISE = False # Use Pairwise data or not
+RANK = False # Ranking Prediction and Loss enabled or not
 ADAPTIVE = True # Adaptation is enabled or not
 LOSS = "L1" # 'L1' or 'L2
 ADVERSARIAL_FLAG = True #ADVERSARIAL ADAPTATION BASED LOSS:
 LABEL_NORM = False  # LABEL NORMALIZATION ON DATASET
 SIGMA2 = 1e5  # SMOOTHING LOSS FOR REGRESSION DA
-MMD_FLAG = True # MMD Flag
-SMOOTH_FLAG = True # Smoothing flag
+MMD_FLAG = True # MMD Flag for MMD Based Loss
+SMOOTH_FLAG = True # Smoothing flag for Graph Laplacian Smoothing based Loss
 IDENTITY_FLAG = True # IDENTITY CONSTRAINT BASED LOSS
 
 EXPERIMENT_NAME = 'BaselineExperiment'
