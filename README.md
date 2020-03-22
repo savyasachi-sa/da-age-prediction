@@ -5,13 +5,31 @@ Domain Adaptation for Age prediction
 
 The following Libraries are required to run the dataset - `torch, matplotlib`
 
-We also need to add utk dataset to /da-age-prediction/data/  [Already present in the zip provided]
+We also need to add utk dataset to /da-age-prediction/data/  [Already present in the folder provided]
 
 ## Code Structure
 
 All the code is highly modular with self descriptive names. All the configuration is controlled in `config.py`
 
-## How to Run
+* `main.py` - Driver Class for training
+* `config.py` - Holds all the configuration for training the model.
+* `dataset` - dataset is the Pytorch's dataset class for UTK dataset. 
+* `dataset_design` - builds the dataset csvs from the utk dataset based on the training validation splits
+* `dataset_factory` - factory to fetch the right dataset based on the configuration
+* `final_resnet` - Main Model with various configurations for pairiwse ranking etc. 
+* `adversarial_network` - Adversarial Network
+* `cdan` - Helper function to evaluate adversarial Loss.
+* `mmd` - Helper function to evaluate MMD Loss.
+* `mds` - Helper function for MDS evaluation.
+* `baseline_train` & `adaptive_train` - Utility classes to trigger baseline and adaptive training respectively
+* `adaptive_experiment` - Training code to train the network in adaptive mode.
+* `nntools` - Training code to train the network without Adaptation.
+
+## Instructions to Run
+
+## Get The dataset Ready
+
+* Th folder contains the data in a zipped format. Please unzip the dataset using command `unzip data.zip`
 
 ### Training
 
