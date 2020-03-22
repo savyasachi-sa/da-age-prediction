@@ -11,6 +11,7 @@ def report_loss(exp: Experiment):
         print("Loss Value: ", exp.history[exp.epoch - 1])
 
 
+# This method initiates the training for any adaptive experiment
 def train(experiment_name, pretrained_model_name = None, stats_manager=StatsManager()):
 
     net = FinalResnet()

@@ -2,6 +2,7 @@ from config import *
 from dataset import UTK, PairwiseUTK
 from dataset_design import DatasetDesign
 
+# Builds and Creates the Correct Dataset Based on the Configuration for Ethnicities and Pairwise Settings
 
 def get_datasets():
     # Build Dataset

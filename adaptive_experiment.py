@@ -9,6 +9,8 @@ import torch
 import torch.utils.data as td
 from utils import write_to_file
 
+# This module contains the training code for any Adaptive Model.
+# Please See Experiment's run method(Line 181 for main logic)
 
 def get_writable_stats(d):
     out = {'training': d['training_loss'], 'validation': d['val_loss'].item(),
