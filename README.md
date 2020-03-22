@@ -13,6 +13,8 @@ All the code is highly modular with self descriptive names. All the configuratio
 
 * `main.py` - Driver Class for training
 * `config.py` - Holds all the configuration for training the model.
+                PAIRWISE : Set this flag to True to load the images in a pairwise manner and to predict the age difference    between them.
+                RANK : Set this flag to True(only in case PAIRWISE == True) to predict both the relative age difference and the order of the identities in the image in terms of age.
 * `dataset` - dataset is the Pytorch's dataset class for UTK dataset. 
 * `dataset_design` - builds the dataset csvs from the utk dataset based on the training validation splits
 * `dataset_factory` - factory to fetch the right dataset based on the configuration
@@ -29,7 +31,7 @@ All the code is highly modular with self descriptive names. All the configuratio
 
 ## Get The dataset Ready
 
-* Th folder contains the data in a zipped format. Please unzip the dataset using command `unzip data.zip`
+* The folder contains the data in a zipped format. Please unzip the dataset using command `unzip data.zip`
 
 ### Training
 
