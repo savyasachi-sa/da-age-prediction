@@ -1,9 +1,7 @@
+import argparse
 import os
-import pandas as pd
-import torch
 import matplotlib.pyplot as plt
 import numpy as np
-from config import *  # USE Config only for datasets
 from dataset_factory import *
 import torch.utils.data as td
 from final_resnet import FinalResnet
@@ -64,6 +62,7 @@ class GenStatsManager(object):
         return self.metrics
 
     def _save_file(self):
+        print("saving ", str(self.metrics), "in ", self.file_path)
         with open(self.file_path, 'w') as f:
             f.write(str(self.metrics))
 
@@ -105,7 +104,7 @@ class ExperimentStatistics():
                     all_stats['train'].append(stat['training_loss'])
                     all_stats['val'].append(stat['val_loss'].item())
                     all_stats['target'].append(stat['tar_loss'].item())
-                    
+
                 plot_save(self.output_dir, len(parent_stats), 'all_parent_stats', 'epochs', all_stats)
             except BaseException as e:
                 print('An exception occurred while ready parent epoch losses: {}'.format(e))
@@ -153,7 +152,7 @@ class ExperimentStatistics():
             losses['train_losses'] = [l['loss'] for l in losses['train_losses']]
             losses['val_losses'] = np.array(history)[:, 1]
             losses['val_losses'] = [l['loss'] for l in losses['val_losses']]
-                                      
+
             plot_save(self.output_dir, len(history), 'iteration_losses', 'iteration', losses)
         else:
             losses['train_losses'] = np.array(history)
@@ -177,12 +176,11 @@ class ExperimentStatistics():
 # TODO: dataset acc to each model
 
 def evaluate_stats(model_name):
-
     checkpoint_path = get_checkpoint_path(model_name)
-    output_dir = os.path.join(STATS_OUTPUT_DIR,model_name)
-    
+    output_dir = os.path.join(STATS_OUTPUT_DIR, model_name)
+
     os.makedirs(output_dir, exist_ok=True)
-    
+
     net = FinalResnet()
     net = net.to(DEVICE)
     exp = ExperimentStatistics(net, output_dir, checkpoint_path, is_adaptive=ADAPTIVE)
@@ -206,6 +204,12 @@ def evaluate_stats(model_name):
     except BaseException as e:
         print('Error saving NETWORK PERFORMANCE statistics for {}: {}'.format(checkpoint_path, e))
 
+
 if __name__ == "__main__":
-    evaluate_stats(STATS_MODEL_NAME)
-    
+    parser = argparse.ArgumentParser()
+    parser.add_argument("model_name", type=str, help="directory name of the model in models directory")
+    args = parser.parse_args()
+
+    model_name = args.model_name
+    print("Evaluating Model: ", model_name)
+    evaluate_stats(model_name)
