@@ -45,3 +45,4 @@ All the code is highly modular with self descriptive names. All the configuratio
 * In order to evaluate a saved model present in `/models` directory, with name `my_model_name`, Just Run `python experiment_statistics.py my_model_name`.
 * For Instance, if you wish to evaluate the model `baseline` - run `python experiment_statistics.py baseline`
 * It will generate plots and loss values and store it `./results` directory with the same `model_name`
+* You'll also need to set the config accordingly. For example - if you wish to run the pairwise model, set the PAIRWISE flag to True. Similarly for rank.
