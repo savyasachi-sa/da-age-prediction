@@ -13,6 +13,8 @@ MMD_FLAG = True # MMD Flag
 SMOOTH_FLAG = True # Smoothing flag
 IDENTITY_FLAG = True # IDENTITY CONSTRAINT BASED LOSS
 
+EXPERIMENT_NAME = 'BaselineExperiment'
+
 # ************ Training Experiment Settings ************** #
 
 REGRESSOR_CONF = {
@@ -43,8 +45,6 @@ ROOT_CONFIG = {
 ADV_CONF = {
     'hidden_size': 128
 }
-
-EXPERIMENT_NAME = 'TestNo1'
 
 DATASET_ROOT_DIRECTORY = "./data/utk/"
 
