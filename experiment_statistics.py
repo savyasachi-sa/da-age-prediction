@@ -116,27 +116,45 @@ class ExperimentStatistics():
         with torch.no_grad():
             if (calc_train):
                 self.stats_manager.init('{}/train_pred_stats.txt'.format(self.output_dir), metric_names)
-                for x, d in self.train_loader:
+                for sample in self.train_loader:
+                    if PAIRWISE:
+                        x1, x2, d = sample
+                        x = torch.cat((x1,x2), dim=1)
+                    else:
+                        x,d = sample
                     x, d = x.to(self.network.device), d.to(self.network.device)
-                    d = d.view([len(d), 1])
+                    if RANK:
+                        d = d.view([len(d), 2])
                     y = self.network.forward(x)
                     loss = self.network.criterion(y, d)
                     self.stats_manager.calc_store(loss.item(), x, y, d)
                 self.stats_manager.summarize()
 
             self.stats_manager.init('{}/val_pred_stats.txt'.format(self.output_dir), metric_names)
-            for x, d in self.val_loader:
+            for sample in self.val_loader:
+                if PAIRWISE:
+                    x1, x2, d = sample
+                    x = torch.cat((x1,x2), dim=1)
+                else:
+                    x,d = sample
                 x, d = x.to(self.network.device), d.to(self.network.device)
-                d = d.view([len(d), 1])
+                if RANK:
+                    d = d.view([len(d), 2])
                 y = self.network.forward(x)
                 loss = self.network.criterion(y, d)
                 self.stats_manager.calc_store(loss.item(), x, y, d)
             self.stats_manager.summarize()
 
             self.stats_manager.init('{}/target_pred_stats.txt'.format(self.output_dir), metric_names)
-            for x, d in self.target_loader:
+            for sample in self.target_loader:
+                if PAIRWISE:
+                    x1, x2, d = sample
+                    x = torch.cat((x1,x2), dim=1)
+                else:
+                    x,d = sample
                 x, d = x.to(self.network.device), d.to(self.network.device)
-                d = d.view([len(d), 1])
+                if RANK:
+                    d = d.view([len(d), 2])
                 y = self.network.forward(x)
                 loss = self.network.criterion(y, d)
                 self.stats_manager.calc_store(loss.item(), x, y, d)
